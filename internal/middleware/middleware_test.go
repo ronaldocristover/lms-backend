@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -235,4 +236,90 @@ func TestLogger(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestRateLimit_Allow(t *testing.T) {
+	r, w := setupMiddlewareTest()
+	r.Use(RateLimit())
+	r.GET("/test", func(c *gin.Context) {
+		c.String(http.StatusOK, "ok")
+	})
+
+	for i := 0; i < 100; i++ {
+		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req.RemoteAddr = "192.168.1.1:1234"
+		r.ServeHTTP(w, req)
+	}
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestRateLimit_Exceed(t *testing.T) {
+	r, w := setupMiddlewareTest()
+	r.Use(RateLimit())
+	r.GET("/test", func(c *gin.Context) {
+		c.String(http.StatusOK, "ok")
+	})
+
+	for i := 0; i < 101; i++ {
+		w = httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req.RemoteAddr = "10.0.0.1:1234"
+		r.ServeHTTP(w, req)
+	}
+
+	assert.Equal(t, http.StatusTooManyRequests, w.Code)
+	assert.Contains(t, w.Body.String(), "Too many requests")
+}
+
+func TestRateLimit_DifferentIPs(t *testing.T) {
+	r, w := setupMiddlewareTest()
+	r.Use(RateLimit())
+	r.GET("/test", func(c *gin.Context) {
+		c.String(http.StatusOK, "ok")
+	})
+
+	for i := 0; i < 150; i++ {
+		w = httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/test", nil)
+		req.RemoteAddr = fmt.Sprintf("10.0.0.%d:1234", i%10)
+		r.ServeHTTP(w, req)
+	}
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestNewRateLimiter(t *testing.T) {
+	rl := NewRateLimiter(10, time.Second)
+	assert.NotNil(t, rl)
+	assert.Equal(t, 10, rl.rate)
+	assert.Equal(t, time.Second, rl.window)
+}
+
+func TestRateLimiter_Cleanup(t *testing.T) {
+	rl := NewRateLimiter(5, 100*time.Millisecond)
+
+	for i := 0; i < 3; i++ {
+		_ = rl.getVisitor(fmt.Sprintf("10.0.0.%d", i))
+	}
+
+	assert.Equal(t, 3, len(rl.visitors))
+
+	time.Sleep(200 * time.Millisecond)
+	rl.cleanup()
+
+	assert.Equal(t, 0, len(rl.visitors))
+}
+
+func TestRateLimiter_VisitorCount(t *testing.T) {
+	rl := NewRateLimiter(100, time.Minute)
+
+	v1 := rl.getVisitor("1.2.3.4")
+	assert.Equal(t, 1, v1.count)
+
+	v1 = rl.getVisitor("1.2.3.4")
+	assert.Equal(t, 2, v1.count)
+
+	v2 := rl.getVisitor("5.6.7.8")
+	assert.Equal(t, 1, v2.count)
 }
