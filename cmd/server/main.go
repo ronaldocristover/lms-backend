@@ -94,7 +94,7 @@ func main() {
 	sqlDB.SetMaxOpenConns(cfg.Database.MaxOpen)
 	sqlDB.SetMaxIdleConns(cfg.Database.MaxIdle)
 
-	if err := db.AutoMigrate(&model.Role{}, &model.User{}, &model.Organization{}, &model.OrganizationUser{}); err != nil {
+	if err := db.AutoMigrate(&model.Role{}, &model.User{}, &model.Organization{}, &model.OrganizationUser{}, &model.Category{}, &model.Series{}, &model.Session{}, &model.Content{}); err != nil {
 		sugar.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -110,6 +110,22 @@ func main() {
 	orgUserRepo := repository.NewOrganizationUserRepository(db)
 	orgSvc := service.NewOrganizationService(orgRepo, orgUserRepo, userRepo)
 	orgHandler := handler.NewOrganizationHandler(orgSvc)
+
+	catRepo := repository.NewCategoryRepository(db)
+	catSvc := service.NewCategoryService(catRepo)
+	catHandler := handler.NewCategoryHandler(catSvc)
+
+	seriesRepo := repository.NewSeriesRepository(db)
+	seriesSvc := service.NewSeriesService(seriesRepo, catRepo)
+	seriesHandler := handler.NewSeriesHandler(seriesSvc)
+
+	sessionRepo := repository.NewSessionRepository(db)
+	sessionSvc := service.NewSessionService(sessionRepo, seriesRepo)
+	sessionHandler := handler.NewSessionHandler(sessionSvc)
+
+	contentRepo := repository.NewContentRepository(db)
+	contentSvc := service.NewContentService(contentRepo, sessionRepo)
+	contentHandler := handler.NewContentHandler(contentSvc)
 
 	sched := scheduler.NewScheduler(cfg.Jobs.Workers, cfg.Jobs.QueueSize)
 	sched.Start()
@@ -179,6 +195,42 @@ func main() {
 			organizations.POST("/:id/users", orgHandler.AddUser)
 			organizations.PUT("/:id/users/:userId", orgHandler.UpdateUserRole)
 			organizations.DELETE("/:id/users/:userId", orgHandler.RemoveUser)
+		}
+
+		categories := protected.Group("/categories")
+		{
+			categories.POST("", catHandler.Create)
+			categories.GET("", catHandler.List)
+			categories.GET("/:id", catHandler.Get)
+			categories.PUT("/:id", catHandler.Update)
+			categories.DELETE("/:id", catHandler.Delete)
+		}
+
+		series := protected.Group("/series")
+		{
+			series.POST("", seriesHandler.Create)
+			series.GET("", seriesHandler.List)
+			series.GET("/:id", seriesHandler.Get)
+			series.PUT("/:id", seriesHandler.Update)
+			series.DELETE("/:id", seriesHandler.Delete)
+		}
+
+		sessions := protected.Group("/sessions")
+		{
+			sessions.POST("", sessionHandler.Create)
+			sessions.GET("", sessionHandler.List)
+			sessions.GET("/:id", sessionHandler.Get)
+			sessions.PUT("/:id", sessionHandler.Update)
+			sessions.DELETE("/:id", sessionHandler.Delete)
+		}
+
+		contents := protected.Group("/contents")
+		{
+			contents.POST("", contentHandler.Create)
+			contents.GET("", contentHandler.List)
+			contents.GET("/:id", contentHandler.Get)
+			contents.PUT("/:id", contentHandler.Update)
+			contents.DELETE("/:id", contentHandler.Delete)
 		}
 	}
 
