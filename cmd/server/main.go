@@ -71,7 +71,7 @@ func main() {
 	sqlDB.SetMaxOpenConns(cfg.Database.MaxOpen)
 	sqlDB.SetMaxIdleConns(cfg.Database.MaxIdle)
 
-	if err := db.AutoMigrate(&model.User{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Organization{}, &model.OrganizationUser{}); err != nil {
 		sugar.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -79,6 +79,11 @@ func main() {
 	userSvc := service.NewUserService(userRepo, cfg.JWT.Secret, cfg.JWT.Expiry)
 	authHandler := handler.NewAuthHandler(userSvc)
 	userHandler := handler.NewUserHandler(userSvc)
+
+	orgRepo := repository.NewOrganizationRepository(db)
+	orgUserRepo := repository.NewOrganizationUserRepository(db)
+	orgSvc := service.NewOrganizationService(orgRepo, orgUserRepo, userRepo)
+	orgHandler := handler.NewOrganizationHandler(orgSvc)
 
 	sched := scheduler.NewScheduler(cfg.Jobs.Workers, cfg.Jobs.QueueSize)
 	sched.Start()
@@ -123,6 +128,19 @@ func main() {
 			users.GET("/:id", userHandler.Get)
 			users.PUT("/:id", userHandler.Update)
 			users.DELETE("/:id", userHandler.Delete)
+		}
+
+		organizations := protected.Group("/organizations")
+		{
+			organizations.GET("", orgHandler.List)
+			organizations.GET("/:id", orgHandler.Get)
+			organizations.POST("", orgHandler.Create)
+			organizations.PUT("/:id", orgHandler.Update)
+			organizations.DELETE("/:id", orgHandler.Delete)
+			organizations.GET("/:id/users", orgHandler.ListUsers)
+			organizations.POST("/:id/users", orgHandler.AddUser)
+			organizations.PUT("/:id/users/:userId", orgHandler.UpdateUserRole)
+			organizations.DELETE("/:id/users/:userId", orgHandler.RemoveUser)
 		}
 	}
 
