@@ -71,21 +71,23 @@ func main() {
 	sqlDB.SetMaxOpenConns(cfg.Database.MaxOpen)
 	sqlDB.SetMaxIdleConns(cfg.Database.MaxIdle)
 
-	if err := db.AutoMigrate(&model.User{}); err != nil {
+	if err := db.AutoMigrate(&model.Role{}, &model.User{}); err != nil {
 		sugar.Fatalf("Failed to migrate database: %v", err)
 	}
 
+	roleRepo := repository.NewRoleRepository(db)
 	userRepo := repository.NewUserRepository(db)
-	userSvc := service.NewUserService(userRepo, cfg.JWT.Secret, cfg.JWT.Expiry)
+	userSvc := service.NewUserService(userRepo, roleRepo, cfg.JWT.Secret)
+	roleSvc := service.NewRoleService(roleRepo)
 	authHandler := handler.NewAuthHandler(userSvc)
 	userHandler := handler.NewUserHandler(userSvc)
+	roleHandler := handler.NewRoleHandler(roleSvc)
 
 	sched := scheduler.NewScheduler(cfg.Jobs.Workers, cfg.Jobs.QueueSize)
 	sched.Start()
 	defer sched.Stop()
 
-	// Initialize handlers
-	version := "1.0.0" // You can get this from build flags
+	version := "1.0.0"
 	healthHandler := handler.NewHealthHandler(db, version)
 
 	if cfg.Server.Env == "production" {
@@ -99,7 +101,6 @@ func main() {
 	router.Use(middleware.RequestID())
 	router.Use(middleware.RateLimit())
 
-	// Health check endpoints
 	router.GET("/health", healthHandler.HealthCheck)
 	router.GET("/health/status", healthHandler.HealthStatusCheck)
 	router.GET("/health/detailed", healthHandler.HealthDetailedCheck)
@@ -117,8 +118,18 @@ func main() {
 	{
 		protected.GET("/auth/me", authHandler.Me)
 
+		roles := protected.Group("/roles")
+		{
+			roles.POST("", roleHandler.Create)
+			roles.GET("", roleHandler.List)
+			roles.GET("/:id", roleHandler.Get)
+			roles.PUT("/:id", roleHandler.Update)
+			roles.DELETE("/:id", roleHandler.Delete)
+		}
+
 		users := protected.Group("/users")
 		{
+			users.POST("", userHandler.Create)
 			users.GET("", userHandler.List)
 			users.GET("/:id", userHandler.Get)
 			users.PUT("/:id", userHandler.Update)

@@ -19,6 +19,26 @@ func NewUserHandler(userSvc service.UserService) *UserHandler {
 	return &UserHandler{userSvc: userSvc}
 }
 
+func (h *UserHandler) Create(c *gin.Context) {
+	var req model.CreateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, apierror.BadRequest(err.Error()))
+		return
+	}
+
+	user, err := h.userSvc.Create(c.Request.Context(), &req)
+	if err != nil {
+		if err == service.ErrUserExists {
+			response.Error(c, apierror.Conflict("User already exists"))
+			return
+		}
+		response.Error(c, apierror.Internal("Failed to create user"))
+		return
+	}
+
+	response.Created(c, user)
+}
+
 func (h *UserHandler) List(c *gin.Context) {
 	var req model.ListUsersRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -79,6 +99,14 @@ func (h *UserHandler) Update(c *gin.Context) {
 
 	user, err := h.userSvc.Update(c.Request.Context(), id, &req)
 	if err != nil {
+		if err == service.ErrUserNotFound {
+			response.Error(c, apierror.NotFound("User not found"))
+			return
+		}
+		if err == service.ErrUserExists {
+			response.Error(c, apierror.Conflict("User already exists"))
+			return
+		}
 		response.Error(c, apierror.Internal("Failed to update user"))
 		return
 	}
@@ -94,9 +122,13 @@ func (h *UserHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.userSvc.Delete(c.Request.Context(), id); err != nil {
+		if err == service.ErrUserNotFound {
+			response.Error(c, apierror.NotFound("User not found"))
+			return
+		}
 		response.Error(c, apierror.Internal("Failed to delete user"))
 		return
 	}
 
-	response.Success(c, nil)
+	response.NoContent(c)
 }

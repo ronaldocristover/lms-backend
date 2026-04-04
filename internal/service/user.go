@@ -18,12 +18,12 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrUserExists         = errors.New("user already exists")
 	ErrUserNotFound       = errors.New("user not found")
-	ErrUserSuspended      = errors.New("user account is suspended")
 )
 
 type UserService interface {
 	Register(ctx context.Context, req *model.RegisterRequest) (*model.LoginResponse, error)
 	Login(ctx context.Context, req *model.LoginRequest) (*model.LoginResponse, error)
+	Create(ctx context.Context, req *model.CreateUserRequest) (*model.User, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*model.User, error)
 	Update(ctx context.Context, id uuid.UUID, req *model.UpdateUserRequest) (*model.User, error)
 	Delete(ctx context.Context, id uuid.UUID) error
@@ -32,15 +32,15 @@ type UserService interface {
 
 type userService struct {
 	repo      repository.UserRepository
+	roleRepo  repository.RoleRepository
 	jwtSecret string
-	jwtExpiry time.Duration
 }
 
-func NewUserService(repo repository.UserRepository, jwtSecret string, jwtExpiry time.Duration) UserService {
+func NewUserService(repo repository.UserRepository, roleRepo repository.RoleRepository, jwtSecret string) UserService {
 	return &userService{
 		repo:      repo,
+		roleRepo:  roleRepo,
 		jwtSecret: jwtSecret,
-		jwtExpiry: jwtExpiry,
 	}
 }
 
@@ -57,17 +57,23 @@ func (s *userService) Register(ctx context.Context, req *model.RegisterRequest) 
 		return nil, ErrUserExists
 	}
 
+	role, err := s.roleRepo.GetByID(ctx, req.RoleID)
+	if err != nil {
+		return nil, apierror.BadRequest("Invalid role")
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, apierror.Internal("Failed to hash password")
 	}
 
 	user := &model.User{
-		Email:        req.Email,
-		PasswordHash: string(hashedPassword),
-		Name:         req.Name,
-		Role:         model.UserRoleUser,
-		Status:       model.UserStatusActive,
+		Email:          req.Email,
+		PasswordHash:   string(hashedPassword),
+		Name:           req.Name,
+		RoleID:         req.RoleID,
+		Role:           role,
+		OrganizationID: req.OrganizationID,
 	}
 
 	if err := s.repo.Create(ctx, user); err != nil {
@@ -91,10 +97,6 @@ func (s *userService) Login(ctx context.Context, req *model.LoginRequest) (*mode
 		return nil, ErrInvalidCredentials
 	}
 
-	if user.Status == model.UserStatusSuspended {
-		return nil, ErrUserSuspended
-	}
-
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 		return nil, ErrInvalidCredentials
 	}
@@ -108,6 +110,38 @@ func (s *userService) Login(ctx context.Context, req *model.LoginRequest) (*mode
 		Token: token,
 		User:  *user,
 	}, nil
+}
+
+func (s *userService) Create(ctx context.Context, req *model.CreateUserRequest) (*model.User, error) {
+	existing, _ := s.repo.GetByEmail(ctx, req.Email)
+	if existing != nil {
+		return nil, ErrUserExists
+	}
+
+	role, err := s.roleRepo.GetByID(ctx, req.RoleID)
+	if err != nil {
+		return nil, apierror.BadRequest("Invalid role")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, apierror.Internal("Failed to hash password")
+	}
+
+	user := &model.User{
+		Email:          req.Email,
+		PasswordHash:   string(hashedPassword),
+		Name:           req.Name,
+		RoleID:         req.RoleID,
+		Role:           role,
+		OrganizationID: req.OrganizationID,
+	}
+
+	if err := s.repo.Create(ctx, user); err != nil {
+		return nil, apierror.Internal("Failed to create user")
+	}
+
+	return user, nil
 }
 
 func (s *userService) GetByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
@@ -124,29 +158,43 @@ func (s *userService) Update(ctx context.Context, id uuid.UUID, req *model.Updat
 		return nil, ErrUserNotFound
 	}
 
+	if req.Email != "" {
+		existing, _ := s.repo.GetByEmail(ctx, req.Email)
+		if existing != nil && existing.ID != id {
+			return nil, ErrUserExists
+		}
+		user.Email = req.Email
+	}
 	if req.Name != "" {
 		user.Name = req.Name
 	}
-	if req.Role != "" {
-		user.Role = req.Role
+	if req.RoleID != uuid.Nil {
+		role, err := s.roleRepo.GetByID(ctx, req.RoleID)
+		if err != nil {
+			return nil, apierror.BadRequest("Invalid role")
+		}
+		user.RoleID = req.RoleID
+		user.Role = role
 	}
-	if req.Avatar != "" {
-		user.Avatar = req.Avatar
-	}
-	if req.Status != "" {
-		user.Status = req.Status
+	if req.OrganizationID != nil {
+		user.OrganizationID = req.OrganizationID
 	}
 
 	if err := s.repo.Update(ctx, user); err != nil {
-		return nil, err
+		return nil, apierror.Internal("Failed to update user")
 	}
 
 	return user, nil
 }
 
 func (s *userService) Delete(ctx context.Context, id uuid.UUID) error {
+	_, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return ErrUserNotFound
+	}
+
 	if err := s.repo.Delete(ctx, id); err != nil {
-		return err
+		return apierror.Internal("Failed to delete user")
 	}
 	return nil
 }
@@ -162,12 +210,17 @@ func (s *userService) List(ctx context.Context, req *model.ListUsersRequest) ([]
 }
 
 func (s *userService) generateToken(user *model.User) (string, error) {
+	roleName := ""
+	if user.Role != nil {
+		roleName = user.Role.Name
+	}
+
 	claims := JWTClaims{
 		UserID: user.ID,
 		Email:  user.Email,
-		Role:   user.Role,
+		Role:   roleName,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.jwtExpiry)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
