@@ -19,6 +19,21 @@ func NewUserHandler(userSvc service.UserService) *UserHandler {
 	return &UserHandler{userSvc: userSvc}
 }
 
+// ListUsers godoc
+// @Summary      List users
+// @Description  Get paginated list of users with optional filters
+// @Tags         users
+// @Produce      json
+// @Security     BearerAuth
+// @Param        page       query  int     false  "Page number"       minimum(1)  default(1)
+// @Param        page_size  query  int     false  "Items per page"    minimum(1)  maximum(100)  default(20)
+// @Param        role       query  string  false  "Filter by role"    Enums(admin, user, tutor)
+// @Param        status     query  string  false  "Filter by status"  Enums(active, inactive, suspended)
+// @Param        search     query  string  false  "Search name/email"
+// @Success      200  {object}  response.PaginatedResponse{data=[]model.User}
+// @Failure      401  {object}  response.ErrorResponse
+// @Failure      500  {object}  response.ErrorResponse
+// @Router       /users [get]
 func (h *UserHandler) List(c *gin.Context) {
 	var req model.ListUsersRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
@@ -48,6 +63,17 @@ func (h *UserHandler) List(c *gin.Context) {
 	})
 }
 
+// GetUser godoc
+// @Summary      Get user by ID
+// @Description  Get a single user by their UUID
+// @Tags         users
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "User ID (UUID)"
+// @Success      200  {object}  response.SuccessResponse{data=model.User}
+// @Failure      400  {object}  response.ErrorResponse
+// @Failure      404  {object}  response.ErrorResponse
+// @Router       /users/{id} [get]
 func (h *UserHandler) Get(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -64,6 +90,19 @@ func (h *UserHandler) Get(c *gin.Context) {
 	response.Success(c, user)
 }
 
+// UpdateUser godoc
+// @Summary      Update user
+// @Description  Update user profile (name, role, avatar, status)
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id       path      string                  true  "User ID (UUID)"
+// @Param        request  body      model.UpdateUserRequest  true  "Update fields"
+// @Success      200  {object}  response.SuccessResponse{data=model.User}
+// @Failure      400  {object}  response.ErrorResponse
+// @Failure      500  {object}  response.ErrorResponse
+// @Router       /users/{id} [put]
 func (h *UserHandler) Update(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -86,6 +125,17 @@ func (h *UserHandler) Update(c *gin.Context) {
 	response.Success(c, user)
 }
 
+// DeleteUser godoc
+// @Summary      Delete user
+// @Description  Delete a user by ID
+// @Tags         users
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id   path      string  true  "User ID (UUID)"
+// @Success      200  {object}  response.SuccessResponse
+// @Failure      400  {object}  response.ErrorResponse
+// @Failure      500  {object}  response.ErrorResponse
+// @Router       /users/{id} [delete]
 func (h *UserHandler) Delete(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
