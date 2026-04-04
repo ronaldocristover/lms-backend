@@ -17,6 +17,18 @@ func NewAuthHandler(userSvc service.UserService) *AuthHandler {
 	return &AuthHandler{userSvc: userSvc}
 }
 
+// Register godoc
+// @Summary      Register a new user
+// @Description  Create a new user account and return JWT token
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      model.RegisterRequest  true  "Register request"
+// @Success      200      {object}  response.SuccessResponse{data=model.LoginResponse}
+// @Failure      400      {object}  response.ErrorResponse
+// @Failure      409      {object}  response.ErrorResponse
+// @Failure      500      {object}  response.ErrorResponse
+// @Router       /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req model.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -38,6 +50,18 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	response.Success(c, resp)
 }
 
+// Login godoc
+// @Summary      Login user
+// @Description  Authenticate user and return JWT token
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      model.LoginRequest  true  "Login request"
+// @Success      200      {object}  response.SuccessResponse{data=model.LoginResponse}
+// @Failure      400      {object}  response.ErrorResponse
+// @Failure      401      {object}  response.ErrorResponse
+// @Failure      500      {object}  response.ErrorResponse
+// @Router       /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req model.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -59,6 +83,16 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	response.Success(c, resp)
 }
 
+// Me godoc
+// @Summary      Get current user
+// @Description  Get the authenticated user's profile
+// @Tags         auth
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  response.SuccessResponse{data=model.User}
+// @Failure      401  {object}  response.ErrorResponse
+// @Failure      404  {object}  response.ErrorResponse
+// @Router       /auth/me [get]
 func (h *AuthHandler) Me(c *gin.Context) {
 	userIDVal, exists := c.Get("userID")
 	if !exists {

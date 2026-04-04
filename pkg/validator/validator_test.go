@@ -92,3 +92,33 @@ func TestErrors_Format(t *testing.T) {
 	assert.NotEmpty(t, errors)
 	assert.Contains(t, errors[0], "Name")
 }
+
+func TestErrors_Nil(t *testing.T) {
+	result := Errors(nil)
+	assert.Nil(t, result)
+}
+
+func TestField_Valid(t *testing.T) {
+	err := Field("test@example.com", "email")
+	assert.NoError(t, err)
+}
+
+func TestField_Invalid(t *testing.T) {
+	err := Field("not-an-email", "email")
+	assert.Error(t, err)
+}
+
+func TestField_Min(t *testing.T) {
+	err := Field("ab", "min=3")
+	assert.Error(t, err)
+}
+
+func TestField_Max(t *testing.T) {
+	err := Field("this is a very long string", "max=10")
+	assert.Error(t, err)
+}
+
+func TestField_Required(t *testing.T) {
+	err := Field("", "required")
+	assert.Error(t, err)
+}

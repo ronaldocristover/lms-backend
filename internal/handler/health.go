@@ -68,14 +68,27 @@ func NewHealthHandler(db *gorm.DB, version string) *HealthHandler {
 	}
 }
 
-// HealthCheck basic health check
+// HealthCheck godoc
+// @Summary      Basic health check
+// @Description  Returns OK if service is running
+// @Tags         health
+// @Produce      json
+// @Success      200  {object}  map[string]string
+// @Router       /health [get]
 func (h *HealthHandler) HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status": "ok",
 	})
 }
 
-// HealthStatusCheck comprehensive health status
+// HealthStatusCheck godoc
+// @Summary      Comprehensive health status
+// @Description  Returns health status with database check and system info
+// @Tags         health
+// @Produce      json
+// @Success      200  {object}  HealthStatus
+// @Failure      503  {object}  HealthStatus
+// @Router       /health/status [get]
 func (h *HealthHandler) HealthStatusCheck(c *gin.Context) {
 	checks := make(map[string]Check)
 	allHealthy := true
@@ -115,7 +128,14 @@ func (h *HealthHandler) HealthStatusCheck(c *gin.Context) {
 	c.JSON(statusCode, health)
 }
 
-// HealthDetailedCheck detailed health check with database info
+// HealthDetailedCheck godoc
+// @Summary      Detailed health check
+// @Description  Returns detailed health with connection pool stats
+// @Tags         health
+// @Produce      json
+// @Success      200  {object}  DetailedHealthStatus
+// @Failure      503  {object}  DetailedHealthStatus
+// @Router       /health/detailed [get]
 func (h *HealthHandler) HealthDetailedCheck(c *gin.Context) {
 	checks := make(map[string]Check)
 	allHealthy := true
@@ -175,14 +195,27 @@ func (h *HealthHandler) HealthDetailedCheck(c *gin.Context) {
 	c.JSON(statusCode, health)
 }
 
-// HealthLiveCheck Kubernetes liveness probe
+// HealthLiveCheck godoc
+// @Summary      Liveness probe
+// @Description  Kubernetes liveness probe endpoint
+// @Tags         health
+// @Produce      json
+// @Success      200  {object}  map[string]string
+// @Router       /health/live [get]
 func (h *HealthHandler) HealthLiveCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status": "alive",
 	})
 }
 
-// HealthReadyCheck Kubernetes readiness probe
+// HealthReadyCheck godoc
+// @Summary      Readiness probe
+// @Description  Kubernetes readiness probe — checks database connectivity
+// @Tags         health
+// @Produce      json
+// @Success      200  {object}  map[string]string
+// @Failure      503  {object}  map[string]string
+// @Router       /health/ready [get]
 func (h *HealthHandler) HealthReadyCheck(c *gin.Context) {
 	// Check if database is accessible
 	dbCheck := h.checkDatabase()

@@ -71,6 +71,27 @@ func TestFromError(t *testing.T) {
 	assert.Equal(t, stdErr.Error(), result.Message)
 }
 
+func TestForbidden(t *testing.T) {
+	err := Forbidden("access denied")
+
+	assert.Equal(t, http.StatusForbidden, err.Code)
+	assert.Equal(t, "access denied", err.Message)
+}
+
+func TestUnprocessableEntity(t *testing.T) {
+	err := UnprocessableEntity("unprocessable entity")
+
+	assert.Equal(t, http.StatusUnprocessableEntity, err.Code)
+	assert.Equal(t, "unprocessable entity", err.Message)
+}
+
+func TestNew(t *testing.T) {
+	err := New(http.StatusTeapot, "I'm a teapot")
+
+	assert.Equal(t, http.StatusTeapot, err.Code)
+	assert.Equal(t, "I'm a teapot", err.Message)
+}
+
 func TestWrap(t *testing.T) {
 	innerErr := assert.AnError
 	wrapped := Wrap(innerErr, "outer error")

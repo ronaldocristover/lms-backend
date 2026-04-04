@@ -1,3 +1,22 @@
+// @title           LMS Backend API
+// @version         1.0.0
+// @description     Learning Management System Backend API
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.email  admin@lms.com
+
+// @license.name  MIT
+// @license.url   https://opensource.org/licenses/MIT
+
+// @host      localhost:8080
+// @BasePath  /
+// @schemes   http https
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+
 package main
 
 import (
@@ -13,6 +32,10 @@ import (
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
+	_ "github.com/yourusername/lms/docs"
 	"github.com/yourusername/lms/internal/config"
 	"github.com/yourusername/lms/internal/handler"
 	"github.com/yourusername/lms/internal/middleware"
@@ -106,6 +129,10 @@ func main() {
 	router.GET("/health/detailed", healthHandler.HealthDetailedCheck)
 	router.GET("/health/live", healthHandler.HealthLiveCheck)
 	router.GET("/health/ready", healthHandler.HealthReadyCheck)
+
+	// Swagger documentation
+	//nolint:staticcheck // gin-swagger uses deprecated FileServer
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	auth := router.Group("/auth")
 	{
