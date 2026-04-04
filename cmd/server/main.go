@@ -94,7 +94,7 @@ func main() {
 	sqlDB.SetMaxOpenConns(cfg.Database.MaxOpen)
 	sqlDB.SetMaxIdleConns(cfg.Database.MaxIdle)
 
-	if err := db.AutoMigrate(&model.Role{}, &model.User{}, &model.Organization{}, &model.OrganizationUser{}); err != nil {
+	if err := db.AutoMigrate(&model.Role{}, &model.User{}, &model.Organization{}, &model.OrganizationUser{}, &model.Language{}, &model.Media{}, &model.Subtitle{}); err != nil {
 		sugar.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -110,6 +110,20 @@ func main() {
 	orgUserRepo := repository.NewOrganizationUserRepository(db)
 	orgSvc := service.NewOrganizationService(orgRepo, orgUserRepo, userRepo)
 	orgHandler := handler.NewOrganizationHandler(orgSvc)
+
+	uploadHandler := handler.NewUploadHandler(cfg.Upload.Dir, cfg.Upload.MaxSize)
+
+	langRepo := repository.NewLanguageRepository(db)
+	langSvc := service.NewLanguageService(langRepo)
+	langHandler := handler.NewLanguageHandler(langSvc)
+
+	mediaRepo := repository.NewMediaRepository(db)
+	mediaSvc := service.NewMediaService(mediaRepo, langRepo)
+	mediaHandler := handler.NewMediaHandler(mediaSvc)
+
+	subtitleRepo := repository.NewSubtitleRepository(db)
+	subtitleSvc := service.NewSubtitleService(subtitleRepo, mediaRepo, langRepo)
+	subtitleHandler := handler.NewSubtitleHandler(subtitleSvc)
 
 	sched := scheduler.NewScheduler(cfg.Jobs.Workers, cfg.Jobs.QueueSize)
 	sched.Start()
@@ -180,9 +194,35 @@ func main() {
 			organizations.PUT("/:id/users/:userId", orgHandler.UpdateUserRole)
 			organizations.DELETE("/:id/users/:userId", orgHandler.RemoveUser)
 		}
+
+		languages := protected.Group("/languages")
+		{
+			languages.POST("", langHandler.Create)
+			languages.GET("", langHandler.List)
+			languages.GET("/:id", langHandler.Get)
+			languages.PUT("/:id", langHandler.Update)
+			languages.DELETE("/:id", langHandler.Delete)
+		}
+
+		medias := protected.Group("/media")
+		{
+			medias.POST("", mediaHandler.Create)
+			medias.GET("", mediaHandler.List)
+			medias.GET("/:id", mediaHandler.Get)
+			medias.PUT("/:id", mediaHandler.Update)
+			medias.DELETE("/:id", mediaHandler.Delete)
+		}
+
+		subtitles := protected.Group("/subtitles")
+		{
+			subtitles.POST("", subtitleHandler.Create)
+			subtitles.GET("", subtitleHandler.List)
+			subtitles.GET("/:id", subtitleHandler.Get)
+			subtitles.PUT("/:id", subtitleHandler.Update)
+			subtitles.DELETE("/:id", subtitleHandler.Delete)
+		}
 	}
 
-	uploadHandler := handler.NewUploadHandler(cfg.Upload.Dir, cfg.Upload.MaxSize)
 	router.POST("/upload", middleware.Auth(cfg.JWT.Secret), uploadHandler.Upload)
 	router.GET("/uploads/:filename", uploadHandler.Serve)
 
