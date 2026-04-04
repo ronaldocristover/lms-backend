@@ -17,26 +17,27 @@ import (
 	"github.com/yourusername/lms/internal/service"
 )
 
-// ─── REGISTER ───
-
 func TestAuthHandler_Register_Success(t *testing.T) {
 	mockSvc := new(MockUserService)
 	h := NewAuthHandler(mockSvc)
 	router := setupRouter(h)
 
+	roleID := uuid.New()
 	reqBody := model.RegisterRequest{
 		Email:    "test@example.com",
 		Password: "password123",
 		Name:     "Test User",
+		RoleID:   roleID,
 	}
 
 	resp := &model.LoginResponse{
 		Token: "jwt-token-here",
 		User: model.User{
-			ID:    uuid.New(),
-			Email: reqBody.Email,
-			Name:  reqBody.Name,
-			Role:  "user",
+			ID:     uuid.New(),
+			Email:  reqBody.Email,
+			Name:   reqBody.Name,
+			RoleID: roleID,
+			Role:   &model.Role{ID: roleID, Name: model.RoleStudent},
 		},
 	}
 
@@ -61,14 +62,21 @@ func TestAuthHandler_Register_ReturnsUser(t *testing.T) {
 	router := setupRouter(h)
 
 	userID := uuid.New()
+	roleID := uuid.New()
 	resp := &model.LoginResponse{
 		Token: "token",
-		User: model.User{ID: userID, Email: "new@example.com", Name: "New User", Role: "user"},
+		User: model.User{
+			ID:     userID,
+			Email:  "new@example.com",
+			Name:   "New User",
+			RoleID: roleID,
+			Role:   &model.Role{ID: roleID, Name: model.RoleStudent},
+		},
 	}
 
 	mockSvc.On("Register", mock.Anything, mock.AnythingOfType("*model.RegisterRequest")).Return(resp, nil)
 
-	body, _ := json.Marshal(model.RegisterRequest{Email: "new@example.com", Password: "password123", Name: "New User"})
+	body, _ := json.Marshal(model.RegisterRequest{Email: "new@example.com", Password: "password123", Name: "New User", RoleID: roleID})
 	req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -131,7 +139,8 @@ func TestAuthHandler_Register_UserExists(t *testing.T) {
 
 	mockSvc.On("Register", mock.Anything, mock.AnythingOfType("*model.RegisterRequest")).Return(nil, service.ErrUserExists)
 
-	body, _ := json.Marshal(model.RegisterRequest{Email: "existing@example.com", Password: "password123", Name: "Existing"})
+	roleID := uuid.New()
+	body, _ := json.Marshal(model.RegisterRequest{Email: "existing@example.com", Password: "password123", Name: "Existing", RoleID: roleID})
 	req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -161,7 +170,8 @@ func TestAuthHandler_Register_InternalError(t *testing.T) {
 
 	mockSvc.On("Register", mock.Anything, mock.AnythingOfType("*model.RegisterRequest")).Return(nil, context.DeadlineExceeded)
 
-	body, _ := json.Marshal(model.RegisterRequest{Email: "test@example.com", Password: "password123", Name: "Test"})
+	roleID := uuid.New()
+	body, _ := json.Marshal(model.RegisterRequest{Email: "test@example.com", Password: "password123", Name: "Test", RoleID: roleID})
 	req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -171,16 +181,21 @@ func TestAuthHandler_Register_InternalError(t *testing.T) {
 	mockSvc.AssertExpectations(t)
 }
 
-// ─── LOGIN ───
-
 func TestAuthHandler_Login_Success(t *testing.T) {
 	mockSvc := new(MockUserService)
 	h := NewAuthHandler(mockSvc)
 	router := setupRouter(h)
 
+	roleID := uuid.New()
 	resp := &model.LoginResponse{
 		Token: "jwt-token",
-		User:  model.User{ID: uuid.New(), Email: "test@example.com", Name: "Test User", Role: "user"},
+		User: model.User{
+			ID:     uuid.New(),
+			Email:  "test@example.com",
+			Name:   "Test User",
+			RoleID: roleID,
+			Role:   &model.Role{ID: roleID, Name: model.RoleStudent},
+		},
 	}
 
 	mockSvc.On("Login", mock.Anything, mock.AnythingOfType("*model.LoginRequest")).Return(resp, nil)
@@ -273,15 +288,20 @@ func TestAuthHandler_Login_InternalError(t *testing.T) {
 	mockSvc.AssertExpectations(t)
 }
 
-// ─── ME (Current User) ───
-
 func TestAuthHandler_Me_Success(t *testing.T) {
 	mockSvc := new(MockUserService)
 	h := NewAuthHandler(mockSvc)
 	router := gin.New()
 
 	userID := uuid.New()
-	user := &model.User{ID: userID, Email: "test@example.com", Name: "Test User", Role: "user"}
+	roleID := uuid.New()
+	user := &model.User{
+		ID:     userID,
+		Email:  "test@example.com",
+		Name:   "Test User",
+		RoleID: roleID,
+		Role:   &model.Role{ID: roleID, Name: model.RoleStudent},
+	}
 
 	mockSvc.On("GetByID", mock.Anything, userID).Return(user, nil)
 

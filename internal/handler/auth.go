@@ -74,8 +74,6 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		switch err {
 		case service.ErrInvalidCredentials:
 			response.Error(c, apierror.Unauthorized("Invalid email or password"))
-		case service.ErrUserSuspended:
-			response.Error(c, apierror.Forbidden("Account is suspended"))
 		default:
 			response.Error(c, apierror.Internal("Failed to login"))
 		}

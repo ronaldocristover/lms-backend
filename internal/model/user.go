@@ -8,26 +8,15 @@ import (
 )
 
 type User struct {
-	ID           uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	Email        string    `gorm:"uniqueIndex;not null;size:255" json:"email"`
-	PasswordHash string    `gorm:"not null;size:255" json:"-"`
-	Name         string    `gorm:"size:255" json:"name"`
-	Role         string    `gorm:"size:50;default:'user'" json:"role"`
-	Avatar       string    `gorm:"size:500" json:"avatar"`
-	Status       string    `gorm:"size:20;default:'active'" json:"status"`
-	CreatedAt    time.Time `gorm:"autoCreateTime" json:"created_at"`
-	UpdatedAt    time.Time `gorm:"autoUpdateTime" json:"updated_at"`
+	ID             uuid.UUID  `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	Name           string     `gorm:"size:255" json:"name"`
+	Email          string     `gorm:"uniqueIndex;not null;size:255" json:"email"`
+	PasswordHash   string     `gorm:"not null;size:255" json:"-"`
+	RoleID         uuid.UUID  `gorm:"type:uuid;not null" json:"role_id"`
+	Role           *Role      `gorm:"foreignKey:RoleID" json:"role,omitempty"`
+	OrganizationID *uuid.UUID `gorm:"type:uuid" json:"organization_id,omitempty"`
+	CreatedAt      time.Time  `gorm:"autoCreateTime" json:"created_at"`
 }
-
-const (
-	UserStatusActive    = "active"
-	UserStatusInactive  = "inactive"
-	UserStatusSuspended = "suspended"
-
-	UserRoleAdmin  = "admin"
-	UserRoleUser   = "user"
-	UserRoleTutor  = "tutor"
-)
 
 func (u *User) BeforeCreate(tx *gorm.DB) error {
 	if u.ID == uuid.Nil {
@@ -37,9 +26,11 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 }
 
 type RegisterRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=8"`
-	Name     string `json:"name"`
+	Email          string     `json:"email" binding:"required,email"`
+	Password       string     `json:"password" binding:"required,min=8"`
+	Name           string     `json:"name" binding:"required,min=1,max=255"`
+	RoleID         uuid.UUID  `json:"role_id" binding:"required"`
+	OrganizationID *uuid.UUID `json:"organization_id"`
 }
 
 type LoginRequest struct {
@@ -52,17 +43,25 @@ type LoginResponse struct {
 	User  User   `json:"user"`
 }
 
+type CreateUserRequest struct {
+	Name           string     `json:"name" binding:"required,min=1,max=255"`
+	Email          string     `json:"email" binding:"required,email"`
+	Password       string     `json:"password" binding:"required,min=8"`
+	RoleID         uuid.UUID  `json:"role_id" binding:"required"`
+	OrganizationID *uuid.UUID `json:"organization_id"`
+}
+
 type UpdateUserRequest struct {
-	Name   string `json:"name" binding:"omitempty,min=1,max=255"`
-	Role   string `json:"role" binding:"omitempty,oneof=admin user tutor"`
-	Avatar string `json:"avatar" binding:"omitempty,url,max=500"`
-	Status string `json:"status" binding:"omitempty,oneof=active inactive suspended"`
+	Name           string     `json:"name" binding:"omitempty,min=1,max=255"`
+	Email          string     `json:"email" binding:"omitempty,email"`
+	RoleID         uuid.UUID  `json:"role_id"`
+	OrganizationID *uuid.UUID `json:"organization_id"`
 }
 
 type ListUsersRequest struct {
-	Page     int    `form:"page" binding:"omitempty,min=1"`
-	PageSize int    `form:"page_size" binding:"omitempty,min=1,max=100"`
-	Role     string `form:"role" binding:"omitempty,oneof=admin user tutor"`
-	Status   string `form:"status" binding:"omitempty,oneof=active inactive suspended"`
-	Search   string `form:"search" binding:"omitempty,max=255"`
+	Page           int    `form:"page" binding:"omitempty,min=1"`
+	PageSize       int    `form:"page_size" binding:"omitempty,min=1,max=100"`
+	RoleID         string `form:"role_id" binding:"omitempty"`
+	OrganizationID string `form:"organization_id" binding:"omitempty"`
+	Search         string `form:"search" binding:"omitempty,max=255"`
 }

@@ -19,17 +19,50 @@ func NewUserHandler(userSvc service.UserService) *UserHandler {
 	return &UserHandler{userSvc: userSvc}
 }
 
+// CreateUser godoc
+// @Summary      Create user
+// @Description  Create a new user with role and optional organization
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        request  body      model.CreateUserRequest  true  "User creation payload"
+// @Success      201  {object}  response.SuccessResponse{data=model.User}
+// @Failure      400  {object}  response.ErrorResponse
+// @Failure      409  {object}  response.ErrorResponse
+// @Failure      500  {object}  response.ErrorResponse
+// @Router       /users [post]
+func (h *UserHandler) Create(c *gin.Context) {
+	var req model.CreateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, apierror.BadRequest(err.Error()))
+		return
+	}
+
+	user, err := h.userSvc.Create(c.Request.Context(), &req)
+	if err != nil {
+		if err == service.ErrUserExists {
+			response.Error(c, apierror.Conflict("User already exists"))
+			return
+		}
+		response.Error(c, apierror.Internal("Failed to create user"))
+		return
+	}
+
+	response.Created(c, user)
+}
+
 // ListUsers godoc
 // @Summary      List users
 // @Description  Get paginated list of users with optional filters
 // @Tags         users
 // @Produce      json
 // @Security     BearerAuth
-// @Param        page       query  int     false  "Page number"       minimum(1)  default(1)
-// @Param        page_size  query  int     false  "Items per page"    minimum(1)  maximum(100)  default(20)
-// @Param        role       query  string  false  "Filter by role"    Enums(admin, user, tutor)
-// @Param        status     query  string  false  "Filter by status"  Enums(active, inactive, suspended)
-// @Param        search     query  string  false  "Search name/email"
+// @Param        page           query  int     false  "Page number"       minimum(1)  default(1)
+// @Param        page_size      query  int     false  "Items per page"    minimum(1)  maximum(100)  default(20)
+// @Param        role_id        query  string  false  "Filter by role ID (UUID)"
+// @Param        organization_id query string false  "Filter by organization ID (UUID)"
+// @Param        search         query  string  false  "Search name/email"
 // @Success      200  {object}  response.PaginatedResponse{data=[]model.User}
 // @Failure      401  {object}  response.ErrorResponse
 // @Failure      500  {object}  response.ErrorResponse
@@ -118,6 +151,14 @@ func (h *UserHandler) Update(c *gin.Context) {
 
 	user, err := h.userSvc.Update(c.Request.Context(), id, &req)
 	if err != nil {
+		if err == service.ErrUserNotFound {
+			response.Error(c, apierror.NotFound("User not found"))
+			return
+		}
+		if err == service.ErrUserExists {
+			response.Error(c, apierror.Conflict("User already exists"))
+			return
+		}
 		response.Error(c, apierror.Internal("Failed to update user"))
 		return
 	}
@@ -144,9 +185,13 @@ func (h *UserHandler) Delete(c *gin.Context) {
 	}
 
 	if err := h.userSvc.Delete(c.Request.Context(), id); err != nil {
+		if err == service.ErrUserNotFound {
+			response.Error(c, apierror.NotFound("User not found"))
+			return
+		}
 		response.Error(c, apierror.Internal("Failed to delete user"))
 		return
 	}
 
-	response.Success(c, nil)
+	response.NoContent(c)
 }

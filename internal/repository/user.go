@@ -32,7 +32,7 @@ func (r *userRepository) Create(ctx context.Context, user *model.User) error {
 
 func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	var user model.User
-	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&user).Error; err != nil {
+	if err := r.db.WithContext(ctx).Preload("Role").Where("id = ?", id).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -40,7 +40,7 @@ func (r *userRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.User
 
 func (r *userRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
 	var user model.User
-	if err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error; err != nil {
+	if err := r.db.WithContext(ctx).Preload("Role").Where("email = ?", email).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
@@ -70,11 +70,15 @@ func (r *userRepository) List(ctx context.Context, filter *model.ListUsersReques
 
 	query := r.db.WithContext(ctx).Model(&model.User{})
 
-	if filter.Role != "" {
-		query = query.Where("role = ?", filter.Role)
+	if filter.RoleID != "" {
+		if roleID, err := uuid.Parse(filter.RoleID); err == nil {
+			query = query.Where("role_id = ?", roleID)
+		}
 	}
-	if filter.Status != "" {
-		query = query.Where("status = ?", filter.Status)
+	if filter.OrganizationID != "" {
+		if orgID, err := uuid.Parse(filter.OrganizationID); err == nil {
+			query = query.Where("organization_id = ?", orgID)
+		}
 	}
 	if filter.Search != "" {
 		search := fmt.Sprintf("%%%s%%", filter.Search)
@@ -85,7 +89,7 @@ func (r *userRepository) List(ctx context.Context, filter *model.ListUsersReques
 		return nil, 0, err
 	}
 
-	if err := query.Limit(pageSize).Offset(offset).Find(&users).Error; err != nil {
+	if err := query.Preload("Role").Limit(pageSize).Offset(offset).Find(&users).Error; err != nil {
 		return nil, 0, err
 	}
 

@@ -30,6 +30,14 @@ func (m *MockUserService) Login(ctx context.Context, req *model.LoginRequest) (*
 	return args.Get(0).(*model.LoginResponse), args.Error(1)
 }
 
+func (m *MockUserService) Create(ctx context.Context, req *model.CreateUserRequest) (*model.User, error) {
+	args := m.Called(ctx, req)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.User), args.Error(1)
+}
+
 func (m *MockUserService) GetByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	args := m.Called(ctx, id)
 	if args.Get(0) == nil {
