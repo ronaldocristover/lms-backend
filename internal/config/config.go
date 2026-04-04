@@ -15,34 +15,34 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port            string
-	Env             string
-	ShutdownTimeout time.Duration
+	Port            string        `mapstructure:"port"`
+	Env             string        `mapstructure:"env"`
+	ShutdownTimeout time.Duration `mapstructure:"shutdowntimeout"`
 }
 
 type DatabaseConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	DBName   string
-	MaxOpen  int
-	MaxIdle  int
+	Host     string `mapstructure:"host"`
+	Port     string `mapstructure:"dbport"`
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	DBName   string `mapstructure:"dbname"`
+	MaxOpen  int    `mapstructure:"maxopen"`
+	MaxIdle  int    `mapstructure:"maxidle"`
 }
 
 type JWTConfig struct {
-	Secret string
-	Expiry time.Duration
+	Secret string        `mapstructure:"secret"`
+	Expiry time.Duration `mapstructure:"expiry"`
 }
 
 type JobsConfig struct {
-	Workers    int
-	QueueSize  int
+	Workers   int `mapstructure:"workers"`
+	QueueSize int `mapstructure:"queuesize"`
 }
 
 type UploadConfig struct {
-	Dir       string
-	MaxSize   int64
+	Dir     string `mapstructure:"dir"`
+	MaxSize int64  `mapstructure:"maxsize"`
 }
 
 func Load(path string) (*Config, error) {

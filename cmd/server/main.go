@@ -84,6 +84,10 @@ func main() {
 	sched.Start()
 	defer sched.Stop()
 
+	// Initialize handlers
+	version := "1.0.0" // You can get this from build flags
+	healthHandler := handler.NewHealthHandler(db, version)
+
 	if cfg.Server.Env == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -95,7 +99,12 @@ func main() {
 	router.Use(middleware.RequestID())
 	router.Use(middleware.RateLimit())
 
-	router.GET("/health", handler.HealthCheck)
+	// Health check endpoints
+	router.GET("/health", healthHandler.HealthCheck)
+	router.GET("/health/status", healthHandler.HealthStatusCheck)
+	router.GET("/health/detailed", healthHandler.HealthDetailedCheck)
+	router.GET("/health/live", healthHandler.HealthLiveCheck)
+	router.GET("/health/ready", healthHandler.HealthReadyCheck)
 
 	auth := router.Group("/auth")
 	{
