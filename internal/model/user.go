@@ -13,9 +13,21 @@ type User struct {
 	PasswordHash string    `gorm:"not null;size:255" json:"-"`
 	Name         string    `gorm:"size:255" json:"name"`
 	Role         string    `gorm:"size:50;default:'user'" json:"role"`
+	Avatar       string    `gorm:"size:500" json:"avatar"`
+	Status       string    `gorm:"size:20;default:'active'" json:"status"`
 	CreatedAt    time.Time `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt    time.Time `gorm:"autoUpdateTime" json:"updated_at"`
 }
+
+const (
+	UserStatusActive    = "active"
+	UserStatusInactive  = "inactive"
+	UserStatusSuspended = "suspended"
+
+	UserRoleAdmin  = "admin"
+	UserRoleUser   = "user"
+	UserRoleTutor  = "tutor"
+)
 
 func (u *User) BeforeCreate(tx *gorm.DB) error {
 	if u.ID == uuid.Nil {
@@ -41,6 +53,16 @@ type LoginResponse struct {
 }
 
 type UpdateUserRequest struct {
-	Name  string `json:"name" binding:"omitempty,min=1,max=255"`
-	Role  string `json:"role" binding:"omitempty,oneof=admin user"`
+	Name   string `json:"name" binding:"omitempty,min=1,max=255"`
+	Role   string `json:"role" binding:"omitempty,oneof=admin user tutor"`
+	Avatar string `json:"avatar" binding:"omitempty,url,max=500"`
+	Status string `json:"status" binding:"omitempty,oneof=active inactive suspended"`
+}
+
+type ListUsersRequest struct {
+	Page     int    `form:"page" binding:"omitempty,min=1"`
+	PageSize int    `form:"page_size" binding:"omitempty,min=1,max=100"`
+	Role     string `form:"role" binding:"omitempty,oneof=admin user tutor"`
+	Status   string `form:"status" binding:"omitempty,oneof=active inactive suspended"`
+	Search   string `form:"search" binding:"omitempty,max=255"`
 }

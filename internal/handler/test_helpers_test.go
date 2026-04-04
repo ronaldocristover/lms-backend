@@ -10,7 +10,6 @@ import (
 	"github.com/yourusername/lms/internal/model"
 )
 
-// MockUserService is a mock implementation of UserService
 type MockUserService struct {
 	mock.Mock
 }
@@ -52,15 +51,14 @@ func (m *MockUserService) Delete(ctx context.Context, id uuid.UUID) error {
 	return args.Error(0)
 }
 
-func (m *MockUserService) List(ctx context.Context, page, pageSize int) ([]*model.User, int64, error) {
-	args := m.Called(ctx, page, pageSize)
+func (m *MockUserService) List(ctx context.Context, req *model.ListUsersRequest) ([]*model.User, int64, error) {
+	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, 0, args.Error(2)
 	}
 	return args.Get(0).([]*model.User), args.Get(1).(int64), args.Error(2)
 }
 
-// setupRouter creates a test router for auth handler
 func setupRouter(handler *AuthHandler) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()

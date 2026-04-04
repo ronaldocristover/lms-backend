@@ -18,6 +18,7 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrUserExists         = errors.New("user already exists")
 	ErrUserNotFound       = errors.New("user not found")
+	ErrUserSuspended      = errors.New("user account is suspended")
 )
 
 type UserService interface {
@@ -26,7 +27,7 @@ type UserService interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.User, error)
 	Update(ctx context.Context, id uuid.UUID, req *model.UpdateUserRequest) (*model.User, error)
 	Delete(ctx context.Context, id uuid.UUID) error
-	List(ctx context.Context, page, pageSize int) ([]*model.User, int64, error)
+	List(ctx context.Context, req *model.ListUsersRequest) ([]*model.User, int64, error)
 }
 
 type userService struct {
@@ -51,13 +52,11 @@ type JWTClaims struct {
 }
 
 func (s *userService) Register(ctx context.Context, req *model.RegisterRequest) (*model.LoginResponse, error) {
-	// Check if user exists
 	existing, _ := s.repo.GetByEmail(ctx, req.Email)
 	if existing != nil {
 		return nil, ErrUserExists
 	}
 
-	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, apierror.Internal("Failed to hash password")
@@ -67,14 +66,14 @@ func (s *userService) Register(ctx context.Context, req *model.RegisterRequest) 
 		Email:        req.Email,
 		PasswordHash: string(hashedPassword),
 		Name:         req.Name,
-		Role:         "user",
+		Role:         model.UserRoleUser,
+		Status:       model.UserStatusActive,
 	}
 
 	if err := s.repo.Create(ctx, user); err != nil {
 		return nil, err
 	}
 
-	// Generate JWT
 	token, err := s.generateToken(user)
 	if err != nil {
 		return nil, err
@@ -90,6 +89,10 @@ func (s *userService) Login(ctx context.Context, req *model.LoginRequest) (*mode
 	user, err := s.repo.GetByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, ErrInvalidCredentials
+	}
+
+	if user.Status == model.UserStatusSuspended {
+		return nil, ErrUserSuspended
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
@@ -127,6 +130,12 @@ func (s *userService) Update(ctx context.Context, id uuid.UUID, req *model.Updat
 	if req.Role != "" {
 		user.Role = req.Role
 	}
+	if req.Avatar != "" {
+		user.Avatar = req.Avatar
+	}
+	if req.Status != "" {
+		user.Status = req.Status
+	}
 
 	if err := s.repo.Update(ctx, user); err != nil {
 		return nil, err
@@ -142,15 +151,14 @@ func (s *userService) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-func (s *userService) List(ctx context.Context, page, pageSize int) ([]*model.User, int64, error) {
-	if page < 1 {
-		page = 1
+func (s *userService) List(ctx context.Context, req *model.ListUsersRequest) ([]*model.User, int64, error) {
+	if req.Page < 1 {
+		req.Page = 1
 	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
+	if req.PageSize < 1 || req.PageSize > 100 {
+		req.PageSize = 20
 	}
-	offset := (page - 1) * pageSize
-	return s.repo.List(ctx, pageSize, offset)
+	return s.repo.List(ctx, req)
 }
 
 func (s *userService) generateToken(user *model.User) (string, error) {

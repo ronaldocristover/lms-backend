@@ -1,10 +1,9 @@
 package handler
 
 import (
-	"strconv"
-
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
 	"github.com/yourusername/lms/internal/model"
 	"github.com/yourusername/lms/internal/service"
 	"github.com/yourusername/lms/pkg/apierror"
@@ -21,16 +20,26 @@ func NewUserHandler(userSvc service.UserService) *UserHandler {
 }
 
 func (h *UserHandler) List(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	var req model.ListUsersRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		response.Error(c, apierror.BadRequest(err.Error()))
+		return
+	}
 
-	users, total, err := h.userSvc.List(c.Request.Context(), page, pageSize)
+	if req.Page == 0 {
+		req.Page = 1
+	}
+	if req.PageSize == 0 {
+		req.PageSize = 20
+	}
+
+	users, total, err := h.userSvc.List(c.Request.Context(), &req)
 	if err != nil {
 		response.Error(c, apierror.Internal("Failed to fetch users"))
 		return
 	}
 
-	meta := pagination.NewMeta(page, pageSize, total)
+	meta := pagination.NewMeta(req.Page, req.PageSize, total)
 	response.Paginated(c, users, &response.PaginationMeta{
 		Page:       meta.Page,
 		PageSize:   meta.PageSize,
@@ -40,8 +49,7 @@ func (h *UserHandler) List(c *gin.Context) {
 }
 
 func (h *UserHandler) Get(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		response.Error(c, apierror.BadRequest("Invalid user ID"))
 		return
@@ -57,8 +65,7 @@ func (h *UserHandler) Get(c *gin.Context) {
 }
 
 func (h *UserHandler) Update(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		response.Error(c, apierror.BadRequest("Invalid user ID"))
 		return
@@ -80,8 +87,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 }
 
 func (h *UserHandler) Delete(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := uuid.Parse(idStr)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		response.Error(c, apierror.BadRequest("Invalid user ID"))
 		return
