@@ -94,11 +94,5 @@ func (s *seriesService) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 func (s *seriesService) List(ctx context.Context, req *model.ListSeriesRequest) ([]*model.Series, int64, error) {
-	if req.Page < 1 {
-		req.Page = 1
-	}
-	if req.PageSize < 1 || req.PageSize > 100 {
-		req.PageSize = 20
-	}
 	return s.repo.List(ctx, req)
 }

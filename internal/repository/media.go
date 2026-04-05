@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/yourusername/lms/internal/model"
+	"github.com/yourusername/lms/pkg/pagination"
 	"gorm.io/gorm"
 )
 
@@ -47,41 +48,27 @@ func (r *mediaRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (r *mediaRepository) List(ctx context.Context, filter *model.ListMediaRequest) ([]*model.Media, int64, error) {
 	var medias []*model.Media
-	var total int64
-
-	page := filter.Page
-	pageSize := filter.PageSize
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-	offset := (page - 1) * pageSize
-
 	query := r.db.WithContext(ctx).Model(&model.Media{}).Preload("Language")
 
 	if filter.Type != "" {
 		query = query.Where("type = ?", filter.Type)
 	}
-
 	if filter.LanguageID != "" {
-		langID, err := uuid.Parse(filter.LanguageID)
-		if err == nil {
+		if langID, err := uuid.Parse(filter.LanguageID); err == nil {
 			query = query.Where("language_id = ?", langID)
 		}
 	}
-
 	if filter.Search != "" {
 		search := fmt.Sprintf("%%%s%%", filter.Search)
 		query = query.Where("url ILIKE ?", search)
 	}
 
-	if err := query.Count(&total).Error; err != nil {
+	total, paginated, err := pagination.Paginate(query, filter.Page, filter.PageSize)
+	if err != nil {
 		return nil, 0, err
 	}
 
-	if err := query.Limit(pageSize).Offset(offset).Find(&medias).Error; err != nil {
+	if err := paginated.Find(&medias).Error; err != nil {
 		return nil, 0, err
 	}
 

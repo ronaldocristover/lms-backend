@@ -139,12 +139,6 @@ func (s *organizationService) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 func (s *organizationService) List(ctx context.Context, req *model.ListOrganizationsRequest) ([]*model.Organization, int64, error) {
-	if req.Page < 1 {
-		req.Page = 1
-	}
-	if req.PageSize < 1 || req.PageSize > 100 {
-		req.PageSize = 20
-	}
 	return s.orgRepo.List(ctx, req)
 }
 
@@ -241,12 +235,6 @@ func (s *organizationService) ListUsers(ctx context.Context, orgID uuid.UUID, re
 		return nil, 0, ErrOrganizationNotFound
 	}
 
-	if req.Page < 1 {
-		req.Page = 1
-	}
-	if req.PageSize < 1 || req.PageSize > 100 {
-		req.PageSize = 20
-	}
 
 	return s.orgUserRepo.ListByOrganization(ctx, orgID, req)
 }

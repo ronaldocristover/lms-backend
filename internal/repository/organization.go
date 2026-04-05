@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/yourusername/lms/internal/model"
+	"github.com/yourusername/lms/pkg/pagination"
 	"gorm.io/gorm"
 )
 
@@ -62,23 +63,10 @@ func (r *organizationRepository) Delete(ctx context.Context, id uuid.UUID) error
 
 func (r *organizationRepository) List(ctx context.Context, filter *model.ListOrganizationsRequest) ([]*model.Organization, int64, error) {
 	var orgs []*model.Organization
-	var total int64
-
-	page := filter.Page
-	pageSize := filter.PageSize
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-	offset := (page - 1) * pageSize
-
 	query := r.db.WithContext(ctx).Model(&model.Organization{})
 
 	if filter.OwnerID != "" {
-		ownerID, err := uuid.Parse(filter.OwnerID)
-		if err == nil {
+		if ownerID, err := uuid.Parse(filter.OwnerID); err == nil {
 			query = query.Where("owner_id = ?", ownerID)
 		}
 	}
@@ -87,11 +75,12 @@ func (r *organizationRepository) List(ctx context.Context, filter *model.ListOrg
 		query = query.Where("name ILIKE ?", search)
 	}
 
-	if err := query.Count(&total).Error; err != nil {
+	total, paginated, err := pagination.Paginate(query, filter.Page, filter.PageSize)
+	if err != nil {
 		return nil, 0, err
 	}
 
-	if err := query.Preload("Owner").Limit(pageSize).Offset(offset).Find(&orgs).Error; err != nil {
+	if err := paginated.Preload("Owner").Find(&orgs).Error; err != nil {
 		return nil, 0, err
 	}
 
@@ -105,6 +94,8 @@ func (r *organizationRepository) ExistsByName(ctx context.Context, name string) 
 	}
 	return count > 0, nil
 }
+
+// OrganizationUser repository
 
 type OrganizationUserRepository interface {
 	Create(ctx context.Context, orgUser *model.OrganizationUser) error
@@ -155,18 +146,6 @@ func (r *organizationUserRepository) Delete(ctx context.Context, id uuid.UUID) e
 
 func (r *organizationUserRepository) ListByOrganization(ctx context.Context, orgID uuid.UUID, filter *model.ListOrgUsersRequest) ([]*model.OrganizationUser, int64, error) {
 	var orgUsers []*model.OrganizationUser
-	var total int64
-
-	page := filter.Page
-	pageSize := filter.PageSize
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-	offset := (page - 1) * pageSize
-
 	query := r.db.WithContext(ctx).Model(&model.OrganizationUser{}).Where("organization_id = ?", orgID)
 
 	if filter.Role != "" {
@@ -178,11 +157,12 @@ func (r *organizationUserRepository) ListByOrganization(ctx context.Context, org
 			Where("users.name ILIKE ? OR users.email ILIKE ?", search, search)
 	}
 
-	if err := query.Count(&total).Error; err != nil {
+	total, paginated, err := pagination.Paginate(query, filter.Page, filter.PageSize)
+	if err != nil {
 		return nil, 0, err
 	}
 
-	if err := query.Preload("User").Limit(pageSize).Offset(offset).Find(&orgUsers).Error; err != nil {
+	if err := paginated.Preload("User").Find(&orgUsers).Error; err != nil {
 		return nil, 0, err
 	}
 

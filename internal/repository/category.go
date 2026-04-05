@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/yourusername/lms/internal/model"
+	"github.com/yourusername/lms/pkg/pagination"
 	"gorm.io/gorm"
 )
 
@@ -56,18 +57,6 @@ func (r *categoryRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (r *categoryRepository) List(ctx context.Context, filter *model.ListCategoriesRequest) ([]*model.Category, int64, error) {
 	var categories []*model.Category
-	var total int64
-
-	page := filter.Page
-	pageSize := filter.PageSize
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-	offset := (page - 1) * pageSize
-
 	query := r.db.WithContext(ctx).Model(&model.Category{})
 
 	if filter.Search != "" {
@@ -75,11 +64,12 @@ func (r *categoryRepository) List(ctx context.Context, filter *model.ListCategor
 		query = query.Where("name ILIKE ?", search)
 	}
 
-	if err := query.Count(&total).Error; err != nil {
+	total, paginated, err := pagination.Paginate(query, filter.Page, filter.PageSize)
+	if err != nil {
 		return nil, 0, err
 	}
 
-	if err := query.Order("created_at DESC").Limit(pageSize).Offset(offset).Find(&categories).Error; err != nil {
+	if err := paginated.Order("created_at DESC").Find(&categories).Error; err != nil {
 		return nil, 0, err
 	}
 
