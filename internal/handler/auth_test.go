@@ -18,8 +18,8 @@ import (
 )
 
 func TestAuthHandler_Register_Success(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	roleID := uuid.New()
@@ -57,8 +57,8 @@ func TestAuthHandler_Register_Success(t *testing.T) {
 }
 
 func TestAuthHandler_Register_ReturnsUser(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	userID := uuid.New()
@@ -91,8 +91,8 @@ func TestAuthHandler_Register_ReturnsUser(t *testing.T) {
 }
 
 func TestAuthHandler_Register_InvalidEmail(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	body, _ := json.Marshal(map[string]string{"email": "invalid-email", "password": "password123"})
@@ -105,8 +105,8 @@ func TestAuthHandler_Register_InvalidEmail(t *testing.T) {
 }
 
 func TestAuthHandler_Register_MissingPassword(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	body, _ := json.Marshal(map[string]string{"email": "test@example.com"})
@@ -119,8 +119,8 @@ func TestAuthHandler_Register_MissingPassword(t *testing.T) {
 }
 
 func TestAuthHandler_Register_ShortPassword(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	body, _ := json.Marshal(map[string]string{"email": "test@example.com", "password": "short"})
@@ -133,8 +133,8 @@ func TestAuthHandler_Register_ShortPassword(t *testing.T) {
 }
 
 func TestAuthHandler_Register_UserExists(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	mockSvc.On("Register", mock.Anything, mock.AnythingOfType("*model.RegisterRequest")).Return(nil, service.ErrUserExists)
@@ -151,8 +151,8 @@ func TestAuthHandler_Register_UserExists(t *testing.T) {
 }
 
 func TestAuthHandler_Register_EmptyBody(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewBuffer([]byte{}))
@@ -164,8 +164,8 @@ func TestAuthHandler_Register_EmptyBody(t *testing.T) {
 }
 
 func TestAuthHandler_Register_InternalError(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	mockSvc.On("Register", mock.Anything, mock.AnythingOfType("*model.RegisterRequest")).Return(nil, context.DeadlineExceeded)
@@ -182,8 +182,8 @@ func TestAuthHandler_Register_InternalError(t *testing.T) {
 }
 
 func TestAuthHandler_Login_Success(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	roleID := uuid.New()
@@ -214,8 +214,8 @@ func TestAuthHandler_Login_Success(t *testing.T) {
 }
 
 func TestAuthHandler_Login_InvalidCredentials(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	mockSvc.On("Login", mock.Anything, mock.AnythingOfType("*model.LoginRequest")).Return(nil, service.ErrInvalidCredentials)
@@ -231,8 +231,8 @@ func TestAuthHandler_Login_InvalidCredentials(t *testing.T) {
 }
 
 func TestAuthHandler_Login_InvalidEmail(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	body, _ := json.Marshal(map[string]string{"email": "not-an-email", "password": "password123"})
@@ -245,8 +245,8 @@ func TestAuthHandler_Login_InvalidEmail(t *testing.T) {
 }
 
 func TestAuthHandler_Login_MissingFields(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	body, _ := json.Marshal(map[string]string{"email": "test@example.com"})
@@ -259,8 +259,8 @@ func TestAuthHandler_Login_MissingFields(t *testing.T) {
 }
 
 func TestAuthHandler_Login_EmptyBody(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBuffer([]byte{}))
@@ -272,8 +272,8 @@ func TestAuthHandler_Login_EmptyBody(t *testing.T) {
 }
 
 func TestAuthHandler_Login_InternalError(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	mockSvc.On("Login", mock.Anything, mock.AnythingOfType("*model.LoginRequest")).Return(nil, context.DeadlineExceeded)
@@ -289,8 +289,9 @@ func TestAuthHandler_Login_InternalError(t *testing.T) {
 }
 
 func TestAuthHandler_Me_Success(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockAuthSvc := new(MockAuthService)
+	mockUserSvc := new(MockUserService)
+	h := NewAuthHandler(mockAuthSvc, mockUserSvc)
 	router := gin.New()
 
 	userID := uuid.New()
@@ -303,7 +304,7 @@ func TestAuthHandler_Me_Success(t *testing.T) {
 		Role:   &model.Role{ID: roleID, Name: model.RoleStudent},
 	}
 
-	mockSvc.On("GetByID", mock.Anything, userID).Return(user, nil)
+	mockUserSvc.On("GetByID", mock.Anything, userID).Return(user, nil)
 
 	router.Use(func(c *gin.Context) { c.Set("userID", userID); c.Next() })
 	router.GET("/auth/me", h.Me)
@@ -316,12 +317,12 @@ func TestAuthHandler_Me_Success(t *testing.T) {
 	var response map[string]interface{}
 	json.Unmarshal(w.Body.Bytes(), &response)
 	assert.Equal(t, true, response["success"])
-	mockSvc.AssertExpectations(t)
+	mockAuthSvc.AssertExpectations(t)
 }
 
 func TestAuthHandler_Me_UserNotAuthenticated(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := gin.New()
 	router.GET("/auth/me", h.Me)
 
@@ -333,12 +334,13 @@ func TestAuthHandler_Me_UserNotAuthenticated(t *testing.T) {
 }
 
 func TestAuthHandler_Me_UserNotFound(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockAuthSvc := new(MockAuthService)
+	mockUserSvc := new(MockUserService)
+	h := NewAuthHandler(mockAuthSvc, mockUserSvc)
 	router := gin.New()
 
 	userID := uuid.New()
-	mockSvc.On("GetByID", mock.Anything, userID).Return(nil, service.ErrUserNotFound)
+	mockUserSvc.On("GetByID", mock.Anything, userID).Return(nil, service.ErrUserNotFound)
 
 	router.Use(func(c *gin.Context) { c.Set("userID", userID); c.Next() })
 	router.GET("/auth/me", h.Me)
@@ -348,12 +350,12 @@ func TestAuthHandler_Me_UserNotFound(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
-	mockSvc.AssertExpectations(t)
+	mockUserSvc.AssertExpectations(t)
 }
 
 func TestAuthHandler_RefreshToken_Success(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	userID := uuid.New()
@@ -383,8 +385,8 @@ func TestAuthHandler_RefreshToken_Success(t *testing.T) {
 }
 
 func TestAuthHandler_RefreshToken_MissingBody(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", nil)
@@ -396,8 +398,8 @@ func TestAuthHandler_RefreshToken_MissingBody(t *testing.T) {
 }
 
 func TestAuthHandler_RefreshToken_InvalidToken(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	mockSvc.On("RefreshToken", mock.Anything, "bad-token").Return(nil, service.ErrInvalidToken)
@@ -413,8 +415,8 @@ func TestAuthHandler_RefreshToken_InvalidToken(t *testing.T) {
 }
 
 func TestAuthHandler_RefreshToken_UserNotFound(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	mockSvc.On("RefreshToken", mock.Anything, "orphan-token").Return(nil, service.ErrUserNotFound)
@@ -430,8 +432,8 @@ func TestAuthHandler_RefreshToken_UserNotFound(t *testing.T) {
 }
 
 func TestAuthHandler_RefreshToken_InternalError(t *testing.T) {
-	mockSvc := new(MockUserService)
-	h := NewAuthHandler(mockSvc)
+	mockSvc := new(MockAuthService)
+	h := NewAuthHandler(mockSvc, new(MockUserService))
 	router := setupRouter(h)
 
 	mockSvc.On("RefreshToken", mock.Anything, "some-token").Return(nil, assert.AnError)
