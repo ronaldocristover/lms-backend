@@ -14,6 +14,7 @@ type RateLimiter struct {
 	mu       sync.RWMutex
 	rate     int
 	window   time.Duration
+	stopCh   chan struct{}
 }
 
 type visitor struct {
@@ -28,10 +29,18 @@ func NewRateLimiter(rate int, window time.Duration) *RateLimiter {
 		window:   window,
 	}
 
+	rl.stopCh = make(chan struct{})
+
 	go func() {
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
 		for {
-			time.Sleep(time.Minute)
-			rl.cleanup()
+			select {
+			case <-ticker.C:
+				rl.cleanup()
+			case <-rl.stopCh:
+				return
+			}
 		}
 	}()
 
@@ -63,6 +72,11 @@ func (rl *RateLimiter) getVisitor(ip string) *visitor {
 	v.count++
 
 	return v
+}
+
+// Stop terminates the background cleanup goroutine.
+func (rl *RateLimiter) Stop() {
+	close(rl.stopCh)
 }
 
 func RateLimit() gin.HandlerFunc {

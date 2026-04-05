@@ -94,7 +94,7 @@ func (h *HealthHandler) HealthStatusCheck(c *gin.Context) {
 	allHealthy := true
 
 	// Database check
-	dbCheck := h.checkDatabase()
+	dbCheck := h.checkDatabaseWithContext(c.Request.Context())
 	checks["database"] = dbCheck
 	if dbCheck.Status != "healthy" {
 		allHealthy = false
@@ -141,7 +141,7 @@ func (h *HealthHandler) HealthDetailedCheck(c *gin.Context) {
 	allHealthy := true
 
 	// Database check with details
-	dbCheck := h.checkDatabase()
+	dbCheck := h.checkDatabaseWithContext(c.Request.Context())
 	checks["database"] = dbCheck
 	if dbCheck.Status != "healthy" {
 		allHealthy = false
@@ -218,7 +218,7 @@ func (h *HealthHandler) HealthLiveCheck(c *gin.Context) {
 // @Router       /health/ready [get]
 func (h *HealthHandler) HealthReadyCheck(c *gin.Context) {
 	// Check if database is accessible
-	dbCheck := h.checkDatabase()
+	dbCheck := h.checkDatabaseWithContext(c.Request.Context())
 
 	if dbCheck.Status != "healthy" {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
@@ -234,6 +234,12 @@ func (h *HealthHandler) HealthReadyCheck(c *gin.Context) {
 }
 
 func (h *HealthHandler) checkDatabase() Check {
+	ctx, cancel := DefaultContextTimeout()
+	defer cancel()
+	return h.checkDatabaseWithContext(ctx)
+}
+
+func (h *HealthHandler) checkDatabaseWithContext(ctx context.Context) Check {
 	start := time.Now()
 
 	if h.db == nil {
@@ -250,9 +256,6 @@ func (h *HealthHandler) checkDatabase() Check {
 			Error:  err.Error(),
 		}
 	}
-
-	ctx, cancel := DefaultContextTimeout()
-	defer cancel()
 
 	if err := sqlDB.PingContext(ctx); err != nil {
 		return Check{
