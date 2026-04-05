@@ -8,6 +8,7 @@ import (
 	"github.com/ronaldocristover/lms-backend/internal/model"
 	"github.com/ronaldocristover/lms-backend/internal/repository"
 	"github.com/ronaldocristover/lms-backend/pkg/apierror"
+	"go.uber.org/zap"
 )
 
 var (
@@ -27,10 +28,11 @@ type subtitleService struct {
 	repo      repository.SubtitleRepository
 	mediaRepo repository.MediaRepository
 	langRepo  repository.LanguageRepository
+	logger *zap.SugaredLogger
 }
 
-func NewSubtitleService(repo repository.SubtitleRepository, mediaRepo repository.MediaRepository, langRepo repository.LanguageRepository) SubtitleService {
-	return &subtitleService{repo: repo, mediaRepo: mediaRepo, langRepo: langRepo}
+func NewSubtitleService(repo repository.SubtitleRepository, mediaRepo repository.MediaRepository, langRepo repository.LanguageRepository, logger *zap.SugaredLogger) SubtitleService {
+	return &subtitleService{repo: repo, mediaRepo: mediaRepo, langRepo: langRepo, logger: logger}
 }
 
 func (s *subtitleService) Create(ctx context.Context, req *model.CreateSubtitleRequest) (*model.Subtitle, error) {
@@ -54,9 +56,11 @@ func (s *subtitleService) Create(ctx context.Context, req *model.CreateSubtitleR
 	}
 
 	if err := s.repo.Create(ctx, subtitle); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to create subtitle")
 	}
 
+	s.logger.Infow("subtitle created", "id", subtitle.ID)
 	return subtitle, nil
 }
 
@@ -79,6 +83,7 @@ func (s *subtitleService) Update(ctx context.Context, id uuid.UUID, req *model.U
 	}
 
 	if err := s.repo.Update(ctx, subtitle); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to update subtitle")
 	}
 
@@ -92,6 +97,7 @@ func (s *subtitleService) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	if err := s.repo.Delete(ctx, id); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return apierror.Internal("Failed to delete subtitle")
 	}
 	return nil

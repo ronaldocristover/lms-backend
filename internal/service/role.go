@@ -8,6 +8,7 @@ import (
 	"github.com/ronaldocristover/lms-backend/internal/model"
 	"github.com/ronaldocristover/lms-backend/internal/repository"
 	"github.com/ronaldocristover/lms-backend/pkg/apierror"
+	"go.uber.org/zap"
 )
 
 var (
@@ -25,10 +26,11 @@ type RoleService interface {
 
 type roleService struct {
 	repo repository.RoleRepository
+	logger *zap.SugaredLogger
 }
 
-func NewRoleService(repo repository.RoleRepository) RoleService {
-	return &roleService{repo: repo}
+func NewRoleService(repo repository.RoleRepository, logger *zap.SugaredLogger) RoleService {
+	return &roleService{repo: repo, logger: logger}
 }
 
 func (s *roleService) Create(ctx context.Context, req *model.CreateRoleRequest) (*model.Role, error) {
@@ -42,9 +44,11 @@ func (s *roleService) Create(ctx context.Context, req *model.CreateRoleRequest) 
 	}
 
 	if err := s.repo.Create(ctx, role); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to create role")
 	}
 
+	s.logger.Infow("role created", "id", role.ID)
 	return role, nil
 }
 
@@ -71,6 +75,7 @@ func (s *roleService) Update(ctx context.Context, id uuid.UUID, req *model.Updat
 	}
 
 	if err := s.repo.Update(ctx, role); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to update role")
 	}
 
@@ -84,6 +89,7 @@ func (s *roleService) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	if err := s.repo.Delete(ctx, id); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return apierror.Internal("Failed to delete role")
 	}
 	return nil

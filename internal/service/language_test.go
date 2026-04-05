@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"testing"
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -59,7 +60,7 @@ func (m *MockLanguageRepository) List(ctx context.Context, filter *model.ListLan
 
 func newTestLanguageService() (LanguageService, *MockLanguageRepository) {
 	mockRepo := new(MockLanguageRepository)
-	return NewLanguageService(mockRepo), mockRepo
+	return NewLanguageService(mockRepo, zap.NewNop().Sugar()), mockRepo
 }
 
 func TestLanguageService_Create_Success(t *testing.T) {

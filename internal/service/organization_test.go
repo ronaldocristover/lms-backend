@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -160,7 +161,7 @@ func newTestOrgService() (OrganizationService, *MockOrganizationRepository, *Moc
 	mockOrgRepo := new(MockOrganizationRepository)
 	mockOrgUserRepo := new(MockOrganizationUserRepository)
 	mockUserRepo := new(MockUserRepo)
-	svc := NewOrganizationService(mockOrgRepo, mockOrgUserRepo, mockUserRepo)
+	svc := NewOrganizationService(mockOrgRepo, mockOrgUserRepo, mockUserRepo, zap.NewNop().Sugar())
 	return svc, mockOrgRepo, mockOrgUserRepo, mockUserRepo
 }
 

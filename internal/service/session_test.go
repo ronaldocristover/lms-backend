@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"testing"
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -52,7 +53,7 @@ func (m *MockSessionRepository) List(ctx context.Context, filter *model.ListSess
 func newTestSessionService() (SessionService, *MockSessionRepository, *MockSeriesRepository) {
 	mockSessionRepo := new(MockSessionRepository)
 	mockSeriesRepo := new(MockSeriesRepository)
-	return NewSessionService(mockSessionRepo, mockSeriesRepo), mockSessionRepo, mockSeriesRepo
+	return NewSessionService(mockSessionRepo, mockSeriesRepo, zap.NewNop().Sugar()), mockSessionRepo, mockSeriesRepo
 }
 
 func TestSessionService_Create_Success(t *testing.T) {

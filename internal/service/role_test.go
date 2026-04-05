@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"testing"
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -59,7 +60,7 @@ func (m *MockRoleRepository) List(ctx context.Context, filter *model.ListRolesRe
 
 func newTestRoleService() (RoleService, *MockRoleRepository) {
 	mockRepo := new(MockRoleRepository)
-	return NewRoleService(mockRepo), mockRepo
+	return NewRoleService(mockRepo, zap.NewNop().Sugar()), mockRepo
 }
 
 func TestRoleService_Create_Success(t *testing.T) {

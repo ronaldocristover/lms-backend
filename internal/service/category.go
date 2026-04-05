@@ -8,6 +8,7 @@ import (
 	"github.com/ronaldocristover/lms-backend/internal/model"
 	"github.com/ronaldocristover/lms-backend/internal/repository"
 	"github.com/ronaldocristover/lms-backend/pkg/apierror"
+	"go.uber.org/zap"
 )
 
 var (
@@ -25,10 +26,11 @@ type CategoryService interface {
 
 type categoryService struct {
 	repo repository.CategoryRepository
+	logger *zap.SugaredLogger
 }
 
-func NewCategoryService(repo repository.CategoryRepository) CategoryService {
-	return &categoryService{repo: repo}
+func NewCategoryService(repo repository.CategoryRepository, logger *zap.SugaredLogger) CategoryService {
+	return &categoryService{repo: repo, logger: logger}
 }
 
 func (s *categoryService) Create(ctx context.Context, req *model.CreateCategoryRequest) (*model.Category, error) {
@@ -42,9 +44,11 @@ func (s *categoryService) Create(ctx context.Context, req *model.CreateCategoryR
 	}
 
 	if err := s.repo.Create(ctx, category); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to create category")
 	}
 
+	s.logger.Infow("category created", "id", category.ID)
 	return category, nil
 }
 
@@ -71,6 +75,7 @@ func (s *categoryService) Update(ctx context.Context, id uuid.UUID, req *model.U
 	}
 
 	if err := s.repo.Update(ctx, category); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to update category")
 	}
 
@@ -84,6 +89,7 @@ func (s *categoryService) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	if err := s.repo.Delete(ctx, id); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return apierror.Internal("Failed to delete category")
 	}
 	return nil

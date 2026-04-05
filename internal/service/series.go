@@ -8,6 +8,7 @@ import (
 	"github.com/ronaldocristover/lms-backend/internal/model"
 	"github.com/ronaldocristover/lms-backend/internal/repository"
 	"github.com/ronaldocristover/lms-backend/pkg/apierror"
+	"go.uber.org/zap"
 )
 
 var (
@@ -25,12 +26,14 @@ type SeriesService interface {
 type seriesService struct {
 	repo    repository.SeriesRepository
 	catRepo repository.CategoryRepository
+	logger *zap.SugaredLogger
 }
 
-func NewSeriesService(repo repository.SeriesRepository, catRepo repository.CategoryRepository) SeriesService {
+func NewSeriesService(repo repository.SeriesRepository, catRepo repository.CategoryRepository, logger *zap.SugaredLogger) SeriesService {
 	return &seriesService{
 		repo:    repo,
 		catRepo: catRepo,
+		logger:  logger,
 	}
 }
 
@@ -46,9 +49,11 @@ func (s *seriesService) Create(ctx context.Context, req *model.CreateSeriesReque
 	}
 
 	if err := s.repo.Create(ctx, series); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to create series")
 	}
 
+	s.logger.Infow("series created", "id", series.ID)
 	return series, nil
 }
 
@@ -75,6 +80,7 @@ func (s *seriesService) Update(ctx context.Context, id uuid.UUID, req *model.Upd
 	series.IsPaid = req.IsPaid
 
 	if err := s.repo.Update(ctx, series); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to update series")
 	}
 
@@ -88,6 +94,7 @@ func (s *seriesService) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	if err := s.repo.Delete(ctx, id); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return apierror.Internal("Failed to delete series")
 	}
 	return nil

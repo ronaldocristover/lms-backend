@@ -8,6 +8,7 @@ import (
 	"github.com/ronaldocristover/lms-backend/internal/model"
 	"github.com/ronaldocristover/lms-backend/internal/repository"
 	"github.com/ronaldocristover/lms-backend/pkg/apierror"
+	"go.uber.org/zap"
 )
 
 var (
@@ -25,10 +26,11 @@ type LanguageService interface {
 
 type languageService struct {
 	repo repository.LanguageRepository
+	logger *zap.SugaredLogger
 }
 
-func NewLanguageService(repo repository.LanguageRepository) LanguageService {
-	return &languageService{repo: repo}
+func NewLanguageService(repo repository.LanguageRepository, logger *zap.SugaredLogger) LanguageService {
+	return &languageService{repo: repo, logger: logger}
 }
 
 func (s *languageService) Create(ctx context.Context, req *model.CreateLanguageRequest) (*model.Language, error) {
@@ -43,9 +45,11 @@ func (s *languageService) Create(ctx context.Context, req *model.CreateLanguageR
 	}
 
 	if err := s.repo.Create(ctx, language); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to create language")
 	}
 
+	s.logger.Infow("language created", "id", language.ID)
 	return language, nil
 }
 
@@ -76,6 +80,7 @@ func (s *languageService) Update(ctx context.Context, id uuid.UUID, req *model.U
 	}
 
 	if err := s.repo.Update(ctx, language); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to update language")
 	}
 
@@ -89,6 +94,7 @@ func (s *languageService) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	if err := s.repo.Delete(ctx, id); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return apierror.Internal("Failed to delete language")
 	}
 	return nil
