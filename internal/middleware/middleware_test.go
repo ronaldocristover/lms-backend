@@ -139,7 +139,7 @@ func TestAuth_WrongSecret(t *testing.T) {
 
 func TestCORS(t *testing.T) {
 	r, w := setupMiddlewareTest()
-	r.Use(CORS())
+	r.Use(CORS(CORSConfig{}))
 	r.GET("/test", func(c *gin.Context) {
 		c.String(http.StatusOK, "ok")
 	})
@@ -155,7 +155,7 @@ func TestCORS(t *testing.T) {
 
 func TestCORS_Preflight(t *testing.T) {
 	r, w := setupMiddlewareTest()
-	r.Use(CORS())
+	r.Use(CORS(CORSConfig{}))
 	r.OPTIONS("/test", func(c *gin.Context) {
 		c.String(http.StatusOK, "ok")
 	})

@@ -100,7 +100,7 @@ func main() {
 
 	roleRepo := repository.NewRoleRepository(db)
 	userRepo := repository.NewUserRepository(db)
-	userSvc := service.NewUserService(userRepo, roleRepo, cfg.JWT.Secret)
+	userSvc := service.NewUserService(userRepo, roleRepo, cfg.JWT.Secret, cfg.JWT.Expiry, cfg.JWT.RefreshExpiry)
 	roleSvc := service.NewRoleService(roleRepo)
 	authHandler := handler.NewAuthHandler(userSvc)
 	userHandler := handler.NewUserHandler(userSvc)
@@ -155,7 +155,13 @@ func main() {
 
 	router.Use(middleware.Recovery(sugar))
 	router.Use(middleware.Logger(sugar))
-	router.Use(middleware.CORS())
+	router.Use(middleware.CORS(middleware.CORSConfig{
+		AllowedOrigins:   cfg.CORS.AllowedOrigins,
+		AllowedMethods:   cfg.CORS.AllowedMethods,
+		AllowedHeaders:   cfg.CORS.AllowedHeaders,
+		AllowCredentials: cfg.CORS.AllowCredentials,
+		MaxAge:           int(cfg.CORS.MaxAge.Seconds()),
+	}))
 	router.Use(middleware.RequestID())
 	router.Use(middleware.RateLimit())
 
@@ -173,6 +179,7 @@ func main() {
 	{
 		auth.POST("/register", authHandler.Register)
 		auth.POST("/login", authHandler.Login)
+		auth.POST("/refresh", authHandler.RefreshToken)
 	}
 
 	protected := router.Group("")

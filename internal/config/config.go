@@ -12,6 +12,7 @@ type Config struct {
 	JWT      JWTConfig
 	Jobs     JobsConfig
 	Upload   UploadConfig
+	CORS     CORSConfig
 }
 
 type ServerConfig struct {
@@ -31,8 +32,9 @@ type DatabaseConfig struct {
 }
 
 type JWTConfig struct {
-	Secret string        `mapstructure:"secret"`
-	Expiry time.Duration `mapstructure:"expiry"`
+	Secret        string        `mapstructure:"secret"`
+	Expiry        time.Duration `mapstructure:"expiry"`
+	RefreshExpiry time.Duration `mapstructure:"refreshexpiry"`
 }
 
 type JobsConfig struct {
@@ -43,6 +45,14 @@ type JobsConfig struct {
 type UploadConfig struct {
 	Dir     string `mapstructure:"dir"`
 	MaxSize int64  `mapstructure:"maxsize"`
+}
+
+type CORSConfig struct {
+	AllowedOrigins   []string      `mapstructure:"allowedorigins"`
+	AllowedMethods   []string      `mapstructure:"allowedmethods"`
+	AllowedHeaders   []string      `mapstructure:"allowedheaders"`
+	AllowCredentials bool          `mapstructure:"allowcredentials"`
+	MaxAge           time.Duration `mapstructure:"maxage"`
 }
 
 func Load(path string) (*Config, error) {
