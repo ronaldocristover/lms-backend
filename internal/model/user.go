@@ -39,8 +39,9 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	Token string `json:"token"`
-	User  User   `json:"user"`
+	Token        string `json:"token"`
+	RefreshToken string `json:"refresh_token"`
+	User         User   `json:"user"`
 }
 
 type CreateUserRequest struct {
@@ -64,4 +65,8 @@ type ListUsersRequest struct {
 	RoleID         string `form:"role_id" binding:"omitempty"`
 	OrganizationID string `form:"organization_id" binding:"omitempty"`
 	Search         string `form:"search" binding:"omitempty,max=255"`
+}
+
+type RefreshTokenRequest struct {
+	RefreshToken string `json:"refresh_token" binding:"required"`
 }

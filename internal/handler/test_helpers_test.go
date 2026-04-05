@@ -30,6 +30,14 @@ func (m *MockUserService) Login(ctx context.Context, req *model.LoginRequest) (*
 	return args.Get(0).(*model.LoginResponse), args.Error(1)
 }
 
+func (m *MockUserService) RefreshToken(ctx context.Context, refreshToken string) (*model.LoginResponse, error) {
+	args := m.Called(ctx, refreshToken)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.LoginResponse), args.Error(1)
+}
+
 func (m *MockUserService) Create(ctx context.Context, req *model.CreateUserRequest) (*model.User, error) {
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
@@ -72,5 +80,6 @@ func setupRouter(handler *AuthHandler) *gin.Engine {
 	r := gin.New()
 	r.POST("/auth/register", handler.Register)
 	r.POST("/auth/login", handler.Login)
+	r.POST("/auth/refresh", handler.RefreshToken)
 	return r
 }

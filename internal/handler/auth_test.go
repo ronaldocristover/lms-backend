@@ -350,3 +350,98 @@ func TestAuthHandler_Me_UserNotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, w.Code)
 	mockSvc.AssertExpectations(t)
 }
+
+func TestAuthHandler_RefreshToken_Success(t *testing.T) {
+	mockSvc := new(MockUserService)
+	h := NewAuthHandler(mockSvc)
+	router := setupRouter(h)
+
+	userID := uuid.New()
+	resp := &model.LoginResponse{
+		Token:        "new-access-token",
+		RefreshToken: "new-refresh-token",
+		User:         model.User{ID: userID, Email: "test@example.com"},
+	}
+
+	mockSvc.On("RefreshToken", mock.Anything, "valid-refresh-token").Return(resp, nil)
+
+	body, _ := json.Marshal(model.RefreshTokenRequest{RefreshToken: "valid-refresh-token"})
+	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &response)
+	assert.Equal(t, true, response["success"])
+	data := response["data"].(map[string]interface{})
+	assert.Equal(t, "new-access-token", data["token"])
+	assert.Equal(t, "new-refresh-token", data["refresh_token"])
+	mockSvc.AssertExpectations(t)
+}
+
+func TestAuthHandler_RefreshToken_MissingBody(t *testing.T) {
+	mockSvc := new(MockUserService)
+	h := NewAuthHandler(mockSvc)
+	router := setupRouter(h)
+
+	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", nil)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestAuthHandler_RefreshToken_InvalidToken(t *testing.T) {
+	mockSvc := new(MockUserService)
+	h := NewAuthHandler(mockSvc)
+	router := setupRouter(h)
+
+	mockSvc.On("RefreshToken", mock.Anything, "bad-token").Return(nil, service.ErrInvalidToken)
+
+	body, _ := json.Marshal(model.RefreshTokenRequest{RefreshToken: "bad-token"})
+	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	mockSvc.AssertExpectations(t)
+}
+
+func TestAuthHandler_RefreshToken_UserNotFound(t *testing.T) {
+	mockSvc := new(MockUserService)
+	h := NewAuthHandler(mockSvc)
+	router := setupRouter(h)
+
+	mockSvc.On("RefreshToken", mock.Anything, "orphan-token").Return(nil, service.ErrUserNotFound)
+
+	body, _ := json.Marshal(model.RefreshTokenRequest{RefreshToken: "orphan-token"})
+	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	mockSvc.AssertExpectations(t)
+}
+
+func TestAuthHandler_RefreshToken_InternalError(t *testing.T) {
+	mockSvc := new(MockUserService)
+	h := NewAuthHandler(mockSvc)
+	router := setupRouter(h)
+
+	mockSvc.On("RefreshToken", mock.Anything, "some-token").Return(nil, assert.AnError)
+
+	body, _ := json.Marshal(model.RefreshTokenRequest{RefreshToken: "some-token"})
+	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	mockSvc.AssertExpectations(t)
+}

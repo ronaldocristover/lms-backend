@@ -18,11 +18,13 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrUserExists         = errors.New("user already exists")
 	ErrUserNotFound       = errors.New("user not found")
+	ErrInvalidToken       = errors.New("invalid or expired token")
 )
 
 type UserService interface {
 	Register(ctx context.Context, req *model.RegisterRequest) (*model.LoginResponse, error)
 	Login(ctx context.Context, req *model.LoginRequest) (*model.LoginResponse, error)
+	RefreshToken(ctx context.Context, refreshToken string) (*model.LoginResponse, error)
 	Create(ctx context.Context, req *model.CreateUserRequest) (*model.User, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*model.User, error)
 	Update(ctx context.Context, id uuid.UUID, req *model.UpdateUserRequest) (*model.User, error)
@@ -31,16 +33,26 @@ type UserService interface {
 }
 
 type userService struct {
-	repo      repository.UserRepository
-	roleRepo  repository.RoleRepository
-	jwtSecret string
+	repo           repository.UserRepository
+	roleRepo       repository.RoleRepository
+	jwtSecret      string
+	jwtExpiry      time.Duration
+	refreshExpiry  time.Duration
 }
 
-func NewUserService(repo repository.UserRepository, roleRepo repository.RoleRepository, jwtSecret string) UserService {
+func NewUserService(repo repository.UserRepository, roleRepo repository.RoleRepository, jwtSecret string, jwtExpiry, refreshExpiry time.Duration) UserService {
+	if jwtExpiry == 0 {
+		jwtExpiry = 24 * time.Hour
+	}
+	if refreshExpiry == 0 {
+		refreshExpiry = 7 * 24 * time.Hour // 7 days default
+	}
 	return &userService{
-		repo:      repo,
-		roleRepo:  roleRepo,
-		jwtSecret: jwtSecret,
+		repo:          repo,
+		roleRepo:      roleRepo,
+		jwtSecret:     jwtSecret,
+		jwtExpiry:     jwtExpiry,
+		refreshExpiry: refreshExpiry,
 	}
 }
 
@@ -48,6 +60,7 @@ type JWTClaims struct {
 	UserID uuid.UUID `json:"user_id"`
 	Email  string    `json:"email"`
 	Role   string    `json:"role"`
+	Type   string    `json:"type"` // "access" or "refresh"
 	jwt.RegisteredClaims
 }
 
@@ -80,15 +93,7 @@ func (s *userService) Register(ctx context.Context, req *model.RegisterRequest) 
 		return nil, err
 	}
 
-	token, err := s.generateToken(user)
-	if err != nil {
-		return nil, err
-	}
-
-	return &model.LoginResponse{
-		Token: token,
-		User:  *user,
-	}, nil
+	return s.generateTokenPair(user)
 }
 
 func (s *userService) Login(ctx context.Context, req *model.LoginRequest) (*model.LoginResponse, error) {
@@ -101,15 +106,30 @@ func (s *userService) Login(ctx context.Context, req *model.LoginRequest) (*mode
 		return nil, ErrInvalidCredentials
 	}
 
-	token, err := s.generateToken(user)
+	return s.generateTokenPair(user)
+}
+
+func (s *userService) RefreshToken(ctx context.Context, refreshToken string) (*model.LoginResponse, error) {
+	claims, err := s.parseToken(refreshToken)
 	if err != nil {
-		return nil, err
+		return nil, ErrInvalidToken
 	}
 
-	return &model.LoginResponse{
-		Token: token,
-		User:  *user,
-	}, nil
+	if claims.Type != "refresh" {
+		return nil, ErrInvalidToken
+	}
+
+	userID, err := uuid.Parse(claims.UserID.String())
+	if err != nil {
+		return nil, ErrInvalidToken
+	}
+
+	user, err := s.repo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, ErrUserNotFound
+	}
+
+	return s.generateTokenPair(user)
 }
 
 func (s *userService) Create(ctx context.Context, req *model.CreateUserRequest) (*model.User, error) {
@@ -209,22 +229,63 @@ func (s *userService) List(ctx context.Context, req *model.ListUsersRequest) ([]
 	return s.repo.List(ctx, req)
 }
 
-func (s *userService) generateToken(user *model.User) (string, error) {
+func (s *userService) generateTokenPair(user *model.User) (*model.LoginResponse, error) {
+	accessToken, err := s.generateToken(user, "access", s.jwtExpiry)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshToken, err := s.generateToken(user, "refresh", s.refreshExpiry)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.LoginResponse{
+		Token:        accessToken,
+		RefreshToken: refreshToken,
+		User:         *user,
+	}, nil
+}
+
+func (s *userService) generateToken(user *model.User, tokenType string, expiry time.Duration) (string, error) {
 	roleName := ""
 	if user.Role != nil {
 		roleName = user.Role.Name
 	}
 
+	now := time.Now()
 	claims := JWTClaims{
 		UserID: user.ID,
 		Email:  user.Email,
 		Role:   roleName,
+		Type:   tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(now.Add(expiry)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			Issuer:    "lms-backend",
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(s.jwtSecret))
+}
+
+func (s *userService) parseToken(tokenString string) (*JWTClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, jwt.ErrSignatureInvalid
+		}
+		return []byte(s.jwtSecret), nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, ErrInvalidToken
+	}
+
+	claims, ok := token.Claims.(*JWTClaims)
+	if !ok {
+		return nil, ErrInvalidToken
+	}
+
+	return claims, nil
 }

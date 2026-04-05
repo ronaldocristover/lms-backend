@@ -114,3 +114,37 @@ func (h *AuthHandler) Me(c *gin.Context) {
 
 	response.Success(c, user)
 }
+
+// RefreshToken godoc
+// @Summary      Refresh access token
+// @Description  Exchange a valid refresh token for a new token pair
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      model.RefreshTokenRequest  true  "Refresh token"
+// @Success      200      {object}  response.SuccessResponse{data=model.LoginResponse}
+// @Failure      400      {object}  response.ErrorResponse
+// @Failure      401      {object}  response.ErrorResponse
+// @Router       /auth/refresh [post]
+func (h *AuthHandler) RefreshToken(c *gin.Context) {
+	var req model.RefreshTokenRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, apierror.BadRequest(err.Error()))
+		return
+	}
+
+	resp, err := h.userSvc.RefreshToken(c.Request.Context(), req.RefreshToken)
+	if err != nil {
+		switch err {
+		case service.ErrInvalidToken:
+			response.Error(c, apierror.Unauthorized("Invalid or expired refresh token"))
+		case service.ErrUserNotFound:
+			response.Error(c, apierror.Unauthorized("User not found"))
+		default:
+			response.Error(c, apierror.Internal("Failed to refresh token"))
+		}
+		return
+	}
+
+	response.Success(c, resp)
+}
