@@ -1,4 +1,4 @@
-module github.com/yourusername/lms
+module github.com/ronaldocristover/lms-backend
 
 go 1.25.0
 

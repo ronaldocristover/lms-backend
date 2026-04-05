@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/yourusername/lms/pkg/apierror"
+	"github.com/ronaldocristover/lms-backend/pkg/apierror"
 )
 
 func setupResponseTest() (*gin.Context, *httptest.ResponseRecorder) {

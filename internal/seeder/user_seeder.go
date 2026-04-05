@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
-	"github.com/yourusername/lms/internal/model"
+	"github.com/ronaldocristover/lms-backend/internal/model"
 )
 
 type UserSeeder struct {
