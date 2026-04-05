@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/yourusername/lms/internal/model"
-	"github.com/yourusername/lms/pkg/pagination"
+	"github.com/ronaldocristover/lms-backend/internal/model"
+	"github.com/ronaldocristover/lms-backend/pkg/pagination"
 	"gorm.io/gorm"
 )
 

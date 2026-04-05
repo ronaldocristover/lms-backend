@@ -11,7 +11,7 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"github.com/yourusername/lms/internal/model"
+	"github.com/ronaldocristover/lms-backend/internal/model"
 )
 
 func setupTestDB(t *testing.T) *gorm.DB {

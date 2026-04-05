@@ -9,9 +9,9 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/yourusername/lms/internal/model"
-	"github.com/yourusername/lms/internal/repository"
-	"github.com/yourusername/lms/pkg/apierror"
+	"github.com/ronaldocristover/lms-backend/internal/model"
+	"github.com/ronaldocristover/lms-backend/internal/repository"
+	"github.com/ronaldocristover/lms-backend/pkg/apierror"
 )
 
 var (

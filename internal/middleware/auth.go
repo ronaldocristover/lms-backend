@@ -6,8 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/yourusername/lms/pkg/apierror"
-	"github.com/yourusername/lms/pkg/response"
+	"github.com/ronaldocristover/lms-backend/pkg/apierror"
+	"github.com/ronaldocristover/lms-backend/pkg/response"
 )
 
 func Auth(jwtSecret string) gin.HandlerFunc {

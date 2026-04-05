@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/yourusername/lms/pkg/apierror"
-	"github.com/yourusername/lms/pkg/response"
+	"github.com/ronaldocristover/lms-backend/pkg/apierror"
+	"github.com/ronaldocristover/lms-backend/pkg/response"
 )
 
 type RateLimiter struct {
