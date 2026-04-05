@@ -3,7 +3,9 @@
     "allow": [
       "Bash(go mod:*)",
       "Bash(go build:*)",
-      "Bash(go test:*)"
+      "Bash(go test:*)",
+      "mcp__filesystem__list_directory",
+      "Read(///wsl.localhost/Ubuntu-24.04/home/ubuntu/**)"
     ]
   }
 }
