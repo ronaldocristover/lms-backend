@@ -10,11 +10,12 @@ import (
 )
 
 type AuthHandler struct {
+	authSvc service.AuthService
 	userSvc service.UserService
 }
 
-func NewAuthHandler(userSvc service.UserService) *AuthHandler {
-	return &AuthHandler{userSvc: userSvc}
+func NewAuthHandler(authSvc service.AuthService, userSvc service.UserService) *AuthHandler {
+	return &AuthHandler{authSvc: authSvc, userSvc: userSvc}
 }
 
 // Register godoc
@@ -36,7 +37,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.userSvc.Register(c.Request.Context(), &req)
+	resp, err := h.authSvc.Register(c.Request.Context(), &req)
 	if err != nil {
 		switch err {
 		case service.ErrUserExists:
@@ -69,7 +70,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.userSvc.Login(c.Request.Context(), &req)
+	resp, err := h.authSvc.Login(c.Request.Context(), &req)
 	if err != nil {
 		switch err {
 		case service.ErrInvalidCredentials:
@@ -133,7 +134,7 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.userSvc.RefreshToken(c.Request.Context(), req.RefreshToken)
+	resp, err := h.authSvc.RefreshToken(c.Request.Context(), req.RefreshToken)
 	if err != nil {
 		switch err {
 		case service.ErrInvalidToken:

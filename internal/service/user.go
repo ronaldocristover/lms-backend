@@ -22,10 +22,15 @@ var (
 	ErrInvalidToken       = errors.New("invalid or expired token")
 )
 
-type UserService interface {
+// AuthService handles authentication operations.
+type AuthService interface {
 	Register(ctx context.Context, req *model.RegisterRequest) (*model.LoginResponse, error)
 	Login(ctx context.Context, req *model.LoginRequest) (*model.LoginResponse, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*model.LoginResponse, error)
+}
+
+// UserService handles user CRUD operations.
+type UserService interface {
 	Create(ctx context.Context, req *model.CreateUserRequest) (*model.User, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*model.User, error)
 	Update(ctx context.Context, id uuid.UUID, req *model.UpdateUserRequest) (*model.User, error)
@@ -34,19 +39,51 @@ type UserService interface {
 }
 
 type userService struct {
-	repo           repository.UserRepository
-	roleRepo       repository.RoleRepository
-	jwtSecret      string
-	jwtExpiry      time.Duration
-	refreshExpiry  time.Duration
+	repo          repository.UserRepository
+	roleRepo      repository.RoleRepository
+	jwtSecret     string
+	jwtExpiry     time.Duration
+	refreshExpiry time.Duration
 }
 
-func NewUserService(repo repository.UserRepository, roleRepo repository.RoleRepository, jwtSecret string, jwtExpiry, refreshExpiry time.Duration) UserService {
+type authService struct {
+	UserSvc *userService
+}
+
+// NewAuthService creates a new AuthService.
+func NewAuthService(repo repository.UserRepository, roleRepo repository.RoleRepository, jwtSecret string, jwtExpiry, refreshExpiry time.Duration) AuthService {
 	if jwtExpiry == 0 {
 		jwtExpiry = 24 * time.Hour
 	}
 	if refreshExpiry == 0 {
-		refreshExpiry = 7 * 24 * time.Hour // 7 days default
+		refreshExpiry = 7 * 24 * time.Hour
+	}
+	return &authService{
+		UserSvc: &userService{
+			repo:          repo,
+			roleRepo:      roleRepo,
+			jwtSecret:     jwtSecret,
+			jwtExpiry:     jwtExpiry,
+			refreshExpiry: refreshExpiry,
+		},
+	}
+}
+
+// NewUserService creates a new UserService.
+func NewUserService(repo repository.UserRepository, roleRepo repository.RoleRepository) UserService {
+	return &userService{
+		repo:     repo,
+		roleRepo: roleRepo,
+	}
+}
+
+// newUserServiceInternal creates a userService shared between auth and user services.
+func newUserServiceInternal(repo repository.UserRepository, roleRepo repository.RoleRepository, jwtSecret string, jwtExpiry, refreshExpiry time.Duration) *userService {
+	if jwtExpiry == 0 {
+		jwtExpiry = 24 * time.Hour
+	}
+	if refreshExpiry == 0 {
+		refreshExpiry = 7 * 24 * time.Hour
 	}
 	return &userService{
 		repo:          repo,
@@ -57,21 +94,24 @@ func NewUserService(repo repository.UserRepository, roleRepo repository.RoleRepo
 	}
 }
 
+// JWTClaims represents JWT token claims.
 type JWTClaims struct {
 	UserID uuid.UUID `json:"user_id"`
 	Email  string    `json:"email"`
 	Role   string    `json:"role"`
-	Type   string    `json:"type"` // "access" or "refresh"
+	Type   string    `json:"type"`
 	jwt.RegisteredClaims
 }
 
-func (s *userService) Register(ctx context.Context, req *model.RegisterRequest) (*model.LoginResponse, error) {
-	existing, _ := s.repo.GetByEmail(ctx, req.Email)
+// --- AuthService implementation ---
+
+func (a *authService) Register(ctx context.Context, req *model.RegisterRequest) (*model.LoginResponse, error) {
+	existing, _ := a.UserSvc.repo.GetByEmail(ctx, req.Email)
 	if existing != nil {
 		return nil, ErrUserExists
 	}
 
-	role, err := s.roleRepo.GetByID(ctx, req.RoleID)
+	role, err := a.UserSvc.roleRepo.GetByID(ctx, req.RoleID)
 	if err != nil {
 		return nil, apierror.BadRequest("Invalid role")
 	}
@@ -90,15 +130,15 @@ func (s *userService) Register(ctx context.Context, req *model.RegisterRequest) 
 		OrganizationID: req.OrganizationID,
 	}
 
-	if err := s.repo.Create(ctx, user); err != nil {
+	if err := a.UserSvc.repo.Create(ctx, user); err != nil {
 		return nil, fmt.Errorf("create user: %w", err)
 	}
 
-	return s.generateTokenPair(user)
+	return a.UserSvc.generateTokenPair(user)
 }
 
-func (s *userService) Login(ctx context.Context, req *model.LoginRequest) (*model.LoginResponse, error) {
-	user, err := s.repo.GetByEmail(ctx, req.Email)
+func (a *authService) Login(ctx context.Context, req *model.LoginRequest) (*model.LoginResponse, error) {
+	user, err := a.UserSvc.repo.GetByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, ErrInvalidCredentials
 	}
@@ -107,11 +147,11 @@ func (s *userService) Login(ctx context.Context, req *model.LoginRequest) (*mode
 		return nil, ErrInvalidCredentials
 	}
 
-	return s.generateTokenPair(user)
+	return a.UserSvc.generateTokenPair(user)
 }
 
-func (s *userService) RefreshToken(ctx context.Context, refreshToken string) (*model.LoginResponse, error) {
-	claims, err := s.parseToken(refreshToken)
+func (a *authService) RefreshToken(ctx context.Context, refreshToken string) (*model.LoginResponse, error) {
+	claims, err := a.UserSvc.parseToken(refreshToken)
 	if err != nil {
 		return nil, ErrInvalidToken
 	}
@@ -125,13 +165,15 @@ func (s *userService) RefreshToken(ctx context.Context, refreshToken string) (*m
 		return nil, ErrInvalidToken
 	}
 
-	user, err := s.repo.GetByID(ctx, userID)
+	user, err := a.UserSvc.repo.GetByID(ctx, userID)
 	if err != nil {
 		return nil, ErrUserNotFound
 	}
 
-	return s.generateTokenPair(user)
+	return a.UserSvc.generateTokenPair(user)
 }
+
+// --- UserService implementation ---
 
 func (s *userService) Create(ctx context.Context, req *model.CreateUserRequest) (*model.User, error) {
 	existing, _ := s.repo.GetByEmail(ctx, req.Email)
@@ -223,6 +265,8 @@ func (s *userService) Delete(ctx context.Context, id uuid.UUID) error {
 func (s *userService) List(ctx context.Context, req *model.ListUsersRequest) ([]*model.User, int64, error) {
 	return s.repo.List(ctx, req)
 }
+
+// --- Shared helpers ---
 
 func (s *userService) generateTokenPair(user *model.User) (*model.LoginResponse, error) {
 	accessToken, err := s.generateToken(user, "access", s.jwtExpiry)

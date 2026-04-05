@@ -10,11 +10,12 @@ import (
 	"github.com/ronaldocristover/lms-backend/internal/model"
 )
 
-type MockUserService struct {
+// MockAuthService implements service.AuthService for testing.
+type MockAuthService struct {
 	mock.Mock
 }
 
-func (m *MockUserService) Register(ctx context.Context, req *model.RegisterRequest) (*model.LoginResponse, error) {
+func (m *MockAuthService) Register(ctx context.Context, req *model.RegisterRequest) (*model.LoginResponse, error) {
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -22,7 +23,7 @@ func (m *MockUserService) Register(ctx context.Context, req *model.RegisterReque
 	return args.Get(0).(*model.LoginResponse), args.Error(1)
 }
 
-func (m *MockUserService) Login(ctx context.Context, req *model.LoginRequest) (*model.LoginResponse, error) {
+func (m *MockAuthService) Login(ctx context.Context, req *model.LoginRequest) (*model.LoginResponse, error) {
 	args := m.Called(ctx, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -30,12 +31,17 @@ func (m *MockUserService) Login(ctx context.Context, req *model.LoginRequest) (*
 	return args.Get(0).(*model.LoginResponse), args.Error(1)
 }
 
-func (m *MockUserService) RefreshToken(ctx context.Context, refreshToken string) (*model.LoginResponse, error) {
+func (m *MockAuthService) RefreshToken(ctx context.Context, refreshToken string) (*model.LoginResponse, error) {
 	args := m.Called(ctx, refreshToken)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*model.LoginResponse), args.Error(1)
+}
+
+// MockUserService implements service.UserService for testing.
+type MockUserService struct {
+	mock.Mock
 }
 
 func (m *MockUserService) Create(ctx context.Context, req *model.CreateUserRequest) (*model.User, error) {

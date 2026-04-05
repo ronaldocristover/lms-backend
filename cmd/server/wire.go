@@ -66,7 +66,8 @@ func initDB(cfg *config.Config, sugar *zap.SugaredLogger) *gorm.DB {
 func setupServices(cfg *config.Config, db *gorm.DB, sugar *zap.SugaredLogger) *handlers {
 	roleRepo := repository.NewRoleRepository(db)
 	userRepo := repository.NewUserRepository(db)
-	userSvc := service.NewUserService(userRepo, roleRepo, cfg.JWT.Secret, cfg.JWT.Expiry, cfg.JWT.RefreshExpiry)
+	authSvc := service.NewAuthService(userRepo, roleRepo, cfg.JWT.Secret, cfg.JWT.Expiry, cfg.JWT.RefreshExpiry)
+	userSvc := service.NewUserService(userRepo, roleRepo)
 	roleSvc := service.NewRoleService(roleRepo)
 
 	orgRepo := repository.NewOrganizationRepository(db)
@@ -98,7 +99,7 @@ func setupServices(cfg *config.Config, db *gorm.DB, sugar *zap.SugaredLogger) *h
 	sched.Start()
 
 	return &handlers{
-		Auth:      handler.NewAuthHandler(userSvc),
+		Auth:      handler.NewAuthHandler(authSvc, userSvc),
 		User:      handler.NewUserHandler(userSvc),
 		Role:      handler.NewRoleHandler(roleSvc),
 		Org:       handler.NewOrganizationHandler(orgSvc),
