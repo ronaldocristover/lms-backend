@@ -90,7 +90,7 @@ func (s *userService) Register(ctx context.Context, req *model.RegisterRequest) 
 	}
 
 	if err := s.repo.Create(ctx, user); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create user: %w", err)
 	}
 
 	return s.generateTokenPair(user)
@@ -226,12 +226,12 @@ func (s *userService) List(ctx context.Context, req *model.ListUsersRequest) ([]
 func (s *userService) generateTokenPair(user *model.User) (*model.LoginResponse, error) {
 	accessToken, err := s.generateToken(user, "access", s.jwtExpiry)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create user: %w", err)
 	}
 
 	refreshToken, err := s.generateToken(user, "refresh", s.refreshExpiry)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create user: %w", err)
 	}
 
 	return &model.LoginResponse{
