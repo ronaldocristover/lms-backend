@@ -102,44 +102,44 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	authSvc := service.NewAuthService(userRepo, roleRepo, cfg.JWT.Secret, cfg.JWT.Expiry, cfg.JWT.RefreshExpiry)
 	userSvc := service.NewUserService(userRepo, roleRepo)
-	roleSvc := service.NewRoleService(roleRepo)
+	roleSvc := service.NewRoleService(roleRepo, sugar)
 	authHandler := handler.NewAuthHandler(authSvc, userSvc)
 	userHandler := handler.NewUserHandler(userSvc)
 	roleHandler := handler.NewRoleHandler(roleSvc)
 
 	orgRepo := repository.NewOrganizationRepository(db)
 	orgUserRepo := repository.NewOrganizationUserRepository(db)
-	orgSvc := service.NewOrganizationService(orgRepo, orgUserRepo, userRepo)
+	orgSvc := service.NewOrganizationService(orgRepo, orgUserRepo, userRepo, sugar)
 	orgHandler := handler.NewOrganizationHandler(orgSvc)
 
 	uploadHandler := handler.NewUploadHandler(cfg.Upload.Dir, cfg.Upload.MaxSize)
 
 	langRepo := repository.NewLanguageRepository(db)
-	langSvc := service.NewLanguageService(langRepo)
+	langSvc := service.NewLanguageService(langRepo, sugar)
 	langHandler := handler.NewLanguageHandler(langSvc)
 
 	mediaRepo := repository.NewMediaRepository(db)
-	mediaSvc := service.NewMediaService(mediaRepo, langRepo)
+	mediaSvc := service.NewMediaService(mediaRepo, langRepo, sugar)
 	mediaHandler := handler.NewMediaHandler(mediaSvc)
 
 	subtitleRepo := repository.NewSubtitleRepository(db)
-	subtitleSvc := service.NewSubtitleService(subtitleRepo, mediaRepo, langRepo)
+	subtitleSvc := service.NewSubtitleService(subtitleRepo, mediaRepo, langRepo, sugar)
 	subtitleHandler := handler.NewSubtitleHandler(subtitleSvc)
 
 	catRepo := repository.NewCategoryRepository(db)
-	catSvc := service.NewCategoryService(catRepo)
+	catSvc := service.NewCategoryService(catRepo, sugar)
 	catHandler := handler.NewCategoryHandler(catSvc)
 
 	seriesRepo := repository.NewSeriesRepository(db)
-	seriesSvc := service.NewSeriesService(seriesRepo, catRepo)
+	seriesSvc := service.NewSeriesService(seriesRepo, catRepo, sugar)
 	seriesHandler := handler.NewSeriesHandler(seriesSvc)
 
 	sessionRepo := repository.NewSessionRepository(db)
-	sessionSvc := service.NewSessionService(sessionRepo, seriesRepo)
+	sessionSvc := service.NewSessionService(sessionRepo, seriesRepo, sugar)
 	sessionHandler := handler.NewSessionHandler(sessionSvc)
 
 	contentRepo := repository.NewContentRepository(db)
-	contentSvc := service.NewContentService(contentRepo, sessionRepo)
+	contentSvc := service.NewContentService(contentRepo, sessionRepo, sugar)
 	contentHandler := handler.NewContentHandler(contentSvc)
 
 	sched := scheduler.NewScheduler(cfg.Jobs.Workers, cfg.Jobs.QueueSize)

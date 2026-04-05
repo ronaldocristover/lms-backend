@@ -8,6 +8,7 @@ import (
 	"github.com/ronaldocristover/lms-backend/internal/model"
 	"github.com/ronaldocristover/lms-backend/internal/repository"
 	"github.com/ronaldocristover/lms-backend/pkg/apierror"
+	"go.uber.org/zap"
 )
 
 var (
@@ -38,17 +39,20 @@ type organizationService struct {
 	orgRepo    repository.OrganizationRepository
 	orgUserRepo repository.OrganizationUserRepository
 	userRepo   repository.UserRepository
+	logger *zap.SugaredLogger
 }
 
 func NewOrganizationService(
 	orgRepo repository.OrganizationRepository,
 	orgUserRepo repository.OrganizationUserRepository,
 	userRepo repository.UserRepository,
+	logger *zap.SugaredLogger,
 ) OrganizationService {
 	return &organizationService{
-		orgRepo:    orgRepo,
+		orgRepo:     orgRepo,
 		orgUserRepo: orgUserRepo,
-		userRepo:   userRepo,
+		userRepo:    userRepo,
+		logger:      logger,
 	}
 }
 
@@ -65,6 +69,7 @@ func (s *organizationService) Create(ctx context.Context, req *model.CreateOrgan
 
 	exists, err := s.orgRepo.ExistsByName(ctx, req.Name)
 	if err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to check organization name")
 	}
 	if exists {
@@ -77,6 +82,7 @@ func (s *organizationService) Create(ctx context.Context, req *model.CreateOrgan
 	}
 
 	if err := s.orgRepo.Create(ctx, org); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to create organization")
 	}
 
@@ -87,6 +93,7 @@ func (s *organizationService) Create(ctx context.Context, req *model.CreateOrgan
 	}
 
 	if err := s.orgUserRepo.Create(ctx, orgUser); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to add owner to organization")
 	}
 
@@ -110,6 +117,7 @@ func (s *organizationService) Update(ctx context.Context, id uuid.UUID, req *mod
 	if req.Name != "" {
 		exists, err := s.orgRepo.ExistsByName(ctx, req.Name)
 		if err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 			return nil, apierror.Internal("Failed to check organization name")
 		}
 		if exists && org.Name != req.Name {
@@ -119,6 +127,7 @@ func (s *organizationService) Update(ctx context.Context, id uuid.UUID, req *mod
 	}
 
 	if err := s.orgRepo.Update(ctx, org); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to update organization")
 	}
 
@@ -132,6 +141,7 @@ func (s *organizationService) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	if err := s.orgRepo.Delete(ctx, id); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return apierror.Internal("Failed to delete organization")
 	}
 
@@ -160,6 +170,7 @@ func (s *organizationService) AddUser(ctx context.Context, orgID uuid.UUID, req 
 
 	exists, err := s.orgUserRepo.ExistsByOrgAndUser(ctx, orgID, userID)
 	if err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to check user membership")
 	}
 	if exists {
@@ -173,6 +184,7 @@ func (s *organizationService) AddUser(ctx context.Context, orgID uuid.UUID, req 
 	}
 
 	if err := s.orgUserRepo.Create(ctx, orgUser); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to add user to organization")
 	}
 
@@ -197,6 +209,7 @@ func (s *organizationService) UpdateUserRole(ctx context.Context, orgID, orgUser
 	orgUser.Role = req.Role
 
 	if err := s.orgUserRepo.Update(ctx, orgUser); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to update user role")
 	}
 
@@ -223,6 +236,7 @@ func (s *organizationService) RemoveUser(ctx context.Context, orgID, orgUserID u
 	}
 
 	if err := s.orgUserRepo.Delete(ctx, orgUserID); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return apierror.Internal("Failed to remove user from organization")
 	}
 

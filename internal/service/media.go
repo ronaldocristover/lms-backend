@@ -8,6 +8,7 @@ import (
 	"github.com/ronaldocristover/lms-backend/internal/model"
 	"github.com/ronaldocristover/lms-backend/internal/repository"
 	"github.com/ronaldocristover/lms-backend/pkg/apierror"
+	"go.uber.org/zap"
 )
 
 var (
@@ -25,10 +26,11 @@ type MediaService interface {
 type mediaService struct {
 	repo     repository.MediaRepository
 	langRepo repository.LanguageRepository
+	logger *zap.SugaredLogger
 }
 
-func NewMediaService(repo repository.MediaRepository, langRepo repository.LanguageRepository) MediaService {
-	return &mediaService{repo: repo, langRepo: langRepo}
+func NewMediaService(repo repository.MediaRepository, langRepo repository.LanguageRepository, logger *zap.SugaredLogger) MediaService {
+	return &mediaService{repo: repo, langRepo: langRepo, logger: logger}
 }
 
 func (s *mediaService) Create(ctx context.Context, req *model.CreateMediaRequest) (*model.Media, error) {
@@ -45,9 +47,11 @@ func (s *mediaService) Create(ctx context.Context, req *model.CreateMediaRequest
 	}
 
 	if err := s.repo.Create(ctx, media); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to create media")
 	}
 
+	s.logger.Infow("media created", "id", media.ID)
 	return media, nil
 }
 
@@ -81,6 +85,7 @@ func (s *mediaService) Update(ctx context.Context, id uuid.UUID, req *model.Upda
 	}
 
 	if err := s.repo.Update(ctx, media); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to update media")
 	}
 
@@ -94,6 +99,7 @@ func (s *mediaService) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	if err := s.repo.Delete(ctx, id); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return apierror.Internal("Failed to delete media")
 	}
 	return nil

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"testing"
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -62,7 +63,7 @@ func newTestSubtitleService() (SubtitleService, *MockSubtitleRepository, *MockMe
 	mockSubtitleRepo := new(MockSubtitleRepository)
 	mockMediaRepo := new(MockMediaRepository)
 	mockLangRepo := new(MockLanguageRepository)
-	return NewSubtitleService(mockSubtitleRepo, mockMediaRepo, mockLangRepo), mockSubtitleRepo, mockMediaRepo, mockLangRepo
+	return NewSubtitleService(mockSubtitleRepo, mockMediaRepo, mockLangRepo, zap.NewNop().Sugar()), mockSubtitleRepo, mockMediaRepo, mockLangRepo
 }
 
 func TestSubtitleService_Create_Success(t *testing.T) {

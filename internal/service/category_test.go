@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"testing"
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -59,7 +60,7 @@ func (m *MockCategoryRepository) List(ctx context.Context, filter *model.ListCat
 
 func newTestCategoryService() (CategoryService, *MockCategoryRepository) {
 	mockRepo := new(MockCategoryRepository)
-	return NewCategoryService(mockRepo), mockRepo
+	return NewCategoryService(mockRepo, zap.NewNop().Sugar()), mockRepo
 }
 
 func TestCategoryService_Create_Success(t *testing.T) {

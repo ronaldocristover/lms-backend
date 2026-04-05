@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"testing"
+	"go.uber.org/zap"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -52,7 +53,7 @@ func (m *MockMediaRepository) List(ctx context.Context, filter *model.ListMediaR
 func newTestMediaService() (MediaService, *MockMediaRepository, *MockLanguageRepository) {
 	mockRepo := new(MockMediaRepository)
 	mockLangRepo := new(MockLanguageRepository)
-	return NewMediaService(mockRepo, mockLangRepo), mockRepo, mockLangRepo
+	return NewMediaService(mockRepo, mockLangRepo, zap.NewNop().Sugar()), mockRepo, mockLangRepo
 }
 
 func TestMediaService_Create_Success(t *testing.T) {
