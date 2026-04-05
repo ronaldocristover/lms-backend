@@ -68,32 +68,32 @@ func setupServices(cfg *config.Config, db *gorm.DB, sugar *zap.SugaredLogger) *h
 	userRepo := repository.NewUserRepository(db)
 	authSvc := service.NewAuthService(userRepo, roleRepo, cfg.JWT.Secret, cfg.JWT.Expiry, cfg.JWT.RefreshExpiry)
 	userSvc := service.NewUserService(userRepo, roleRepo)
-	roleSvc := service.NewRoleService(roleRepo)
+	roleSvc := service.NewRoleService(roleRepo, sugar)
 
 	orgRepo := repository.NewOrganizationRepository(db)
 	orgUserRepo := repository.NewOrganizationUserRepository(db)
-	orgSvc := service.NewOrganizationService(orgRepo, orgUserRepo, userRepo)
+	orgSvc := service.NewOrganizationService(orgRepo, orgUserRepo, userRepo, sugar)
 
 	langRepo := repository.NewLanguageRepository(db)
-	langSvc := service.NewLanguageService(langRepo)
+	langSvc := service.NewLanguageService(langRepo, sugar)
 
 	mediaRepo := repository.NewMediaRepository(db)
-	mediaSvc := service.NewMediaService(mediaRepo, langRepo)
+	mediaSvc := service.NewMediaService(mediaRepo, langRepo, sugar)
 
 	subtitleRepo := repository.NewSubtitleRepository(db)
-	subtitleSvc := service.NewSubtitleService(subtitleRepo, mediaRepo, langRepo)
+	subtitleSvc := service.NewSubtitleService(subtitleRepo, mediaRepo, langRepo, sugar)
 
 	catRepo := repository.NewCategoryRepository(db)
-	catSvc := service.NewCategoryService(catRepo)
+	catSvc := service.NewCategoryService(catRepo, sugar)
 
 	seriesRepo := repository.NewSeriesRepository(db)
-	seriesSvc := service.NewSeriesService(seriesRepo, catRepo)
+	seriesSvc := service.NewSeriesService(seriesRepo, catRepo, sugar)
 
 	sessionRepo := repository.NewSessionRepository(db)
-	sessionSvc := service.NewSessionService(sessionRepo, seriesRepo)
+	sessionSvc := service.NewSessionService(sessionRepo, seriesRepo, sugar)
 
 	contentRepo := repository.NewContentRepository(db)
-	contentSvc := service.NewContentService(contentRepo, sessionRepo)
+	contentSvc := service.NewContentService(contentRepo, sessionRepo, sugar)
 
 	sched := scheduler.NewScheduler(cfg.Jobs.Workers, cfg.Jobs.QueueSize)
 	sched.Start()

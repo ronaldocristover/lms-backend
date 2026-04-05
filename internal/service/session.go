@@ -8,6 +8,7 @@ import (
 	"github.com/ronaldocristover/lms-backend/internal/model"
 	"github.com/ronaldocristover/lms-backend/internal/repository"
 	"github.com/ronaldocristover/lms-backend/pkg/apierror"
+	"go.uber.org/zap"
 )
 
 var (
@@ -25,12 +26,14 @@ type SessionService interface {
 type sessionService struct {
 	repo       repository.SessionRepository
 	seriesRepo repository.SeriesRepository
+	logger *zap.SugaredLogger
 }
 
-func NewSessionService(repo repository.SessionRepository, seriesRepo repository.SeriesRepository) SessionService {
+func NewSessionService(repo repository.SessionRepository, seriesRepo repository.SeriesRepository, logger *zap.SugaredLogger) SessionService {
 	return &sessionService{
 		repo:       repo,
 		seriesRepo: seriesRepo,
+		logger:     logger,
 	}
 }
 
@@ -47,9 +50,11 @@ func (s *sessionService) Create(ctx context.Context, req *model.CreateSessionReq
 	}
 
 	if err := s.repo.Create(ctx, session); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to create session")
 	}
 
+	s.logger.Infow("session created", "id", session.ID)
 	return session, nil
 }
 
@@ -77,6 +82,7 @@ func (s *sessionService) Update(ctx context.Context, id uuid.UUID, req *model.Up
 	session.Order = req.Order
 
 	if err := s.repo.Update(ctx, session); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to update session")
 	}
 
@@ -90,6 +96,7 @@ func (s *sessionService) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	if err := s.repo.Delete(ctx, id); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return apierror.Internal("Failed to delete session")
 	}
 	return nil

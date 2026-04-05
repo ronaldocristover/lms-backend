@@ -8,6 +8,7 @@ import (
 	"github.com/ronaldocristover/lms-backend/internal/model"
 	"github.com/ronaldocristover/lms-backend/internal/repository"
 	"github.com/ronaldocristover/lms-backend/pkg/apierror"
+	"go.uber.org/zap"
 )
 
 var (
@@ -25,12 +26,14 @@ type ContentService interface {
 type contentService struct {
 	repo        repository.ContentRepository
 	sessionRepo repository.SessionRepository
+	logger *zap.SugaredLogger
 }
 
-func NewContentService(repo repository.ContentRepository, sessionRepo repository.SessionRepository) ContentService {
+func NewContentService(repo repository.ContentRepository, sessionRepo repository.SessionRepository, logger *zap.SugaredLogger) ContentService {
 	return &contentService{
 		repo:        repo,
 		sessionRepo: sessionRepo,
+		logger:      logger,
 	}
 }
 
@@ -47,9 +50,11 @@ func (s *contentService) Create(ctx context.Context, req *model.CreateContentReq
 	}
 
 	if err := s.repo.Create(ctx, content); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to create content")
 	}
 
+	s.logger.Infow("content created", "id", content.ID)
 	return content, nil
 }
 
@@ -77,6 +82,7 @@ func (s *contentService) Update(ctx context.Context, id uuid.UUID, req *model.Up
 	content.ContentText = req.ContentText
 
 	if err := s.repo.Update(ctx, content); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return nil, apierror.Internal("Failed to update content")
 	}
 
@@ -90,6 +96,7 @@ func (s *contentService) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 
 	if err := s.repo.Delete(ctx, id); err != nil {
+		s.logger.Errorw("operation failed", "error", err)
 		return apierror.Internal("Failed to delete content")
 	}
 	return nil
