@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/yourusername/lms/internal/model"
+	"github.com/yourusername/lms/pkg/pagination"
 	"gorm.io/gorm"
 )
 
@@ -56,44 +57,29 @@ func (r *subtitleRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (r *subtitleRepository) List(ctx context.Context, filter *model.ListSubtitlesRequest) ([]*model.Subtitle, int64, error) {
 	var subtitles []*model.Subtitle
-	var total int64
-
-	page := filter.Page
-	pageSize := filter.PageSize
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-	offset := (page - 1) * pageSize
-
 	query := r.db.WithContext(ctx).Model(&model.Subtitle{}).Preload("Media").Preload("Language")
 
 	if filter.MediaID != "" {
-		mediaID, err := uuid.Parse(filter.MediaID)
-		if err == nil {
+		if mediaID, err := uuid.Parse(filter.MediaID); err == nil {
 			query = query.Where("media_id = ?", mediaID)
 		}
 	}
-
 	if filter.LanguageID != "" {
-		languageID, err := uuid.Parse(filter.LanguageID)
-		if err == nil {
+		if languageID, err := uuid.Parse(filter.LanguageID); err == nil {
 			query = query.Where("language_id = ?", languageID)
 		}
 	}
-
 	if filter.Search != "" {
 		search := fmt.Sprintf("%%%s%%", filter.Search)
 		query = query.Where("content ILIKE ?", search)
 	}
 
-	if err := query.Count(&total).Error; err != nil {
+	total, paginated, err := pagination.Paginate(query, filter.Page, filter.PageSize)
+	if err != nil {
 		return nil, 0, err
 	}
 
-	if err := query.Limit(pageSize).Offset(offset).Find(&subtitles).Error; err != nil {
+	if err := paginated.Find(&subtitles).Error; err != nil {
 		return nil, 0, err
 	}
 

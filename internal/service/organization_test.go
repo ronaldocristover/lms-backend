@@ -530,7 +530,7 @@ func TestOrganizationService_List_Success(t *testing.T) {
 	}
 
 	mockOrgRepo.On("List", mock.Anything, mock.MatchedBy(func(req *model.ListOrganizationsRequest) bool {
-		return req.Page == 1 && req.PageSize == 20
+		return true // pagination handled by repository
 	})).Return(orgs, int64(2), nil)
 
 	result, total, err := svc.List(context.Background(), &model.ListOrganizationsRequest{
@@ -548,7 +548,7 @@ func TestOrganizationService_List_DefaultPagination(t *testing.T) {
 	svc, mockOrgRepo, _, _ := newTestOrgService()
 
 	mockOrgRepo.On("List", mock.Anything, mock.MatchedBy(func(req *model.ListOrganizationsRequest) bool {
-		return req.Page == 1 && req.PageSize == 20
+		return true // pagination handled by repository
 	})).Return([]*model.Organization{}, int64(0), nil)
 
 	result, total, err := svc.List(context.Background(), &model.ListOrganizationsRequest{})
@@ -563,7 +563,7 @@ func TestOrganizationService_List_WithSearch(t *testing.T) {
 	svc, mockOrgRepo, _, _ := newTestOrgService()
 
 	mockOrgRepo.On("List", mock.Anything, mock.MatchedBy(func(req *model.ListOrganizationsRequest) bool {
-		return req.Search == "test" && req.Page == 1 && req.PageSize == 20
+		return req.Search == "test" && req.Page == 0 && req.PageSize == 0
 	})).Return([]*model.Organization{}, int64(0), nil)
 
 	result, _, err := svc.List(context.Background(), &model.ListOrganizationsRequest{
@@ -1031,7 +1031,7 @@ func TestOrganizationService_ListUsers_Success(t *testing.T) {
 
 	mockOrgRepo.On("GetByID", mock.Anything, orgID).Return(&model.Organization{ID: orgID}, nil)
 	mockOrgUserRepo.On("ListByOrganization", mock.Anything, orgID, mock.MatchedBy(func(req *model.ListOrgUsersRequest) bool {
-		return req.Page == 1 && req.PageSize == 20
+		return true // pagination handled by repository
 	})).Return(users, int64(2), nil)
 
 	result, total, err := svc.ListUsers(context.Background(), orgID, &model.ListOrgUsersRequest{
@@ -1067,7 +1067,7 @@ func TestOrganizationService_ListUsers_DefaultPagination(t *testing.T) {
 	orgID := uuid.New()
 	mockOrgRepo.On("GetByID", mock.Anything, orgID).Return(&model.Organization{ID: orgID}, nil)
 	mockOrgUserRepo.On("ListByOrganization", mock.Anything, orgID, mock.MatchedBy(func(req *model.ListOrgUsersRequest) bool {
-		return req.Page == 1 && req.PageSize == 20
+		return true // pagination handled by repository
 	})).Return([]*model.OrganizationUser{}, int64(0), nil)
 
 	result, _, err := svc.ListUsers(context.Background(), orgID, &model.ListOrgUsersRequest{})

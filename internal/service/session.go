@@ -96,11 +96,5 @@ func (s *sessionService) Delete(ctx context.Context, id uuid.UUID) error {
 }
 
 func (s *sessionService) List(ctx context.Context, req *model.ListSessionsRequest) ([]*model.Session, int64, error) {
-	if req.Page < 1 {
-		req.Page = 1
-	}
-	if req.PageSize < 1 || req.PageSize > 100 {
-		req.PageSize = 20
-	}
 	return s.repo.List(ctx, req)
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/yourusername/lms/internal/model"
+	"github.com/yourusername/lms/pkg/pagination"
 	"gorm.io/gorm"
 )
 
@@ -46,33 +47,21 @@ func (r *contentRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (r *contentRepository) List(ctx context.Context, filter *model.ListContentsRequest) ([]*model.Content, int64, error) {
 	var contents []*model.Content
-	var total int64
-
-	page := filter.Page
-	pageSize := filter.PageSize
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-	offset := (page - 1) * pageSize
-
 	query := r.db.WithContext(ctx).Model(&model.Content{}).Preload("Session")
 
 	if filter.SessionID != uuid.Nil {
 		query = query.Where("session_id = ?", filter.SessionID)
 	}
-
 	if filter.Type != "" {
 		query = query.Where("type = ?", filter.Type)
 	}
 
-	if err := query.Count(&total).Error; err != nil {
+	total, paginated, err := pagination.Paginate(query, filter.Page, filter.PageSize)
+	if err != nil {
 		return nil, 0, err
 	}
 
-	if err := query.Order("created_at DESC").Limit(pageSize).Offset(offset).Find(&contents).Error; err != nil {
+	if err := paginated.Order("created_at DESC").Find(&contents).Error; err != nil {
 		return nil, 0, err
 	}
 

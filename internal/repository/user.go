@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/yourusername/lms/internal/model"
+	"github.com/yourusername/lms/pkg/pagination"
 	"gorm.io/gorm"
 )
 
@@ -56,18 +57,6 @@ func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (r *userRepository) List(ctx context.Context, filter *model.ListUsersRequest) ([]*model.User, int64, error) {
 	var users []*model.User
-	var total int64
-
-	page := filter.Page
-	pageSize := filter.PageSize
-	if page < 1 {
-		page = 1
-	}
-	if pageSize < 1 || pageSize > 100 {
-		pageSize = 20
-	}
-	offset := (page - 1) * pageSize
-
 	query := r.db.WithContext(ctx).Model(&model.User{})
 
 	if filter.RoleID != "" {
@@ -85,11 +74,12 @@ func (r *userRepository) List(ctx context.Context, filter *model.ListUsersReques
 		query = query.Where("name ILIKE ? OR email ILIKE ?", search, search)
 	}
 
-	if err := query.Count(&total).Error; err != nil {
+	total, paginated, err := pagination.Paginate(query, filter.Page, filter.PageSize)
+	if err != nil {
 		return nil, 0, err
 	}
 
-	if err := query.Preload("Role").Limit(pageSize).Offset(offset).Find(&users).Error; err != nil {
+	if err := paginated.Preload("Role").Find(&users).Error; err != nil {
 		return nil, 0, err
 	}
 
