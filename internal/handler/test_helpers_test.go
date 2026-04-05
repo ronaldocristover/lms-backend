@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/yourusername/lms/internal/model"
+	"github.com/ronaldocristover/lms-backend/internal/model"
 )
 
 type MockUserService struct {

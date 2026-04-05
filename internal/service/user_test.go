@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/yourusername/lms/internal/model"
+	"github.com/ronaldocristover/lms-backend/internal/model"
 )
 
 type MockUserRepository struct {

@@ -3,10 +3,10 @@ package handler
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/yourusername/lms/internal/model"
-	"github.com/yourusername/lms/internal/service"
-	"github.com/yourusername/lms/pkg/apierror"
-	"github.com/yourusername/lms/pkg/response"
+	"github.com/ronaldocristover/lms-backend/internal/model"
+	"github.com/ronaldocristover/lms-backend/internal/service"
+	"github.com/ronaldocristover/lms-backend/pkg/apierror"
+	"github.com/ronaldocristover/lms-backend/pkg/response"
 )
 
 type AuthHandler struct {

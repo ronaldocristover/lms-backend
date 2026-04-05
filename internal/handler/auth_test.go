@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/yourusername/lms/internal/model"
-	"github.com/yourusername/lms/internal/service"
+	"github.com/ronaldocristover/lms-backend/internal/model"
+	"github.com/ronaldocristover/lms-backend/internal/service"
 )
 
 func TestAuthHandler_Register_Success(t *testing.T) {

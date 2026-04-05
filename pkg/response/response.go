@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/yourusername/lms/pkg/apierror"
+	"github.com/ronaldocristover/lms-backend/pkg/apierror"
 )
 
 type PaginationMeta struct {
